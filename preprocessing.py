@@ -6,10 +6,12 @@ from nitime.viz import drawmatrix_channels
 import numpy as np
 import matplotlib.pyplot as plt
 import mne
+import pickle
 
 ###### This script is highly inspired by the MNE-Python package #######
 
 activate_plots = False
+
 file_path = 'C:/Users/Johan/Desktop/S94_15510_R001.dat'
 raw_data = curry.read_raw_curry(file_path,preload=True, verbose=None)
 # Crop data: 180 seconds of open eyes + 180 seconds of closed eyes + 5 seconds for good measure :)
@@ -75,8 +77,8 @@ raw_data.resample(250, npad="auto")
 # Remove "slow drifts" before running ICA
 filt_raw = raw_data.copy().filter(l_freq=1., h_freq=None)
 
-# Instantiate ICA model
-ica = ICA(n_components=15, max_iter='auto', random_state=97)
+# Instantiate ICA model with variance threshold of 90%
+ica = ICA(n_components=0.9, max_iter='auto', random_state=97)
 
 # Fit ICA model and reconstruct data
 # .fit and .apply changes ica object in-place
@@ -101,12 +103,26 @@ for name,processed_data in separated.items():
     # Apply the CoherenAnalyzer on the timeseries object (nitime library)
     C = CoherenceAnalyzer(T)
 
+    # Plot coherence for each frequency band
+    # for key,value in frequency_bands.items():
+    #     freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
+    #     coherence_map = np.mean(C.coherence[:, :, freq_idx], -1)
+        # print(f"coherence_map for {key}:")
+        # print(coherence_map.shape)
+        # coherence_plot = drawmatrix_channels(coherence_map, ch_names, size=[10., 10.],title=f"Coherence map for the ${key}$ freq. band ({name})", color_anchor=[0,1])
+        # plt.savefig(f"figures/coherence_{key}_{name}.png")
 
+    # Compute coherence map for each frequency band (eyes open and eyes closed), reshape to 2D array and pickle the data
+    coherence_maps = np.array([])
     for key,value in frequency_bands.items():
         freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
         coherence_map = np.mean(C.coherence[:, :, freq_idx], -1)
-        # print(f"coherence_map for {key}:")
-        # print(coherence_map.shape)
-        coherence_plot = drawmatrix_channels(coherence_map, ch_names, size=[10., 10.],title=f"Coherence map for the ${key}$ freq. band ({name})", color_anchor=[0,1])
-        plt.savefig(f"figures/coherence_{key}_{name}.png")
+        # Only include one half of the map (diagonal)
+        coherence_map = coherence_map[np.triu_indices(len(ch_names), k=1)]
+        # Ravel the coherence map to 2D array and concatenate it to the coherence_maps array
+        coherence_maps = np.concatenate((coherence_maps, coherence_map.ravel()))
+    with open(f"data/coherence_maps_{name}.pkl", "wb") as f:
+        pickle.dump(coherence_maps, f)
+
+
 
