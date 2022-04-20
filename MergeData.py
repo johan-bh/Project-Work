@@ -57,3 +57,5 @@ pca_closed.set_index(df.index, inplace=True)
 data = pd.concat([pca_closed, df], axis=1)
 # Save this dataframe to "data/ai_data.pkl"
 data.to_pickle("data/ai_data.pkl")
+
+# Also do this for open eyes
