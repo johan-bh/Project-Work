@@ -7,31 +7,164 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mne
 import pickle
-
-###### This script is highly inspired by the MNE-Python package #######
+import cupy as cp
+import os
 
 activate_plots = False
+mne.utils.set_config('MNE_USE_CUDA', 'true')  # Use GPU for ICA etc.
+# Check if GPU is available. n_jobs = 1 (CPU) n_jobs = "cuda" (GPU). n_jobs is a param for filter functions etc.
+if mne.utils.get_config('MNE_USE_CUDA') == 'true':
+    n_jobs = "cuda"
+    print('GPU is available')
+else:
+    n_jobs = "1"
+    print('GPU is not available')
 
-file_path = 'C:/Users/Johan/Desktop/S94_15510_R001.dat'
-raw_data = curry.read_raw_curry(file_path,preload=True, verbose=None)
-# Crop data: 180 seconds of open eyes + 180 seconds of closed eyes + 5 seconds for good measure :)
-raw_data.crop(tmax=365)
-# Set EEG reference to common average
-raw_data.set_eeg_reference(ref_channels='average')
+def preprocessing(file_path):
+    """Runs the preprocessing pipeline for a single file.
+    :arg file_path: Path to the file to be processed.
+    :return: list with coherence map (eyes closed and eyes open)
+    """
+    # Disable warnings
+    mne.set_log_level('CRITICAL')
 
-def add_arrows(axes):
-    for ax in axes:
-        freqs = ax.lines[-1].get_xdata()
-        psds = ax.lines[-1].get_ydata()
-        for freq in (50, 100, 150):
-            idx = np.searchsorted(freqs, freq)
-            # get ymax of a small region around the freq. of interest
-            y = psds[(idx - 4):(idx + 5)].max()
-            ax.arrow(x=freqs[idx], y=y + 18, dx=0, dy=-12, color='red',
-                     width=0.1, head_width=3, length_includes_head=True)
+    # Load data
+    raw_data = curry.read_raw_curry(file_path, preload=True, verbose=None)
+
+    # Filter data
+    # Crop data: 60 seconds of open eyes + 60 seconds of closed eyes + 10 seconds for good measure :)
+    raw_data.crop(tmax=130)
+    # Set EEG reference to common average
+    raw_data.set_eeg_reference(ref_channels='average',verbose=None)
+
+    # Band-pass filtering (0.5 - 70 Hz )
+    raw_data.filter(0.5, 70., fir_design='firwin', n_jobs=n_jobs,verbose=None)
+
+    # # Removing power-line noise with notch filtering
+    # This seems to do more harm than good.
+    # raw_data = raw_data.notch_filter(np.arange(50,251,50), fir_design='firwin')
+
+    # Downsample frequency to 250Hz
+    raw_data.resample(250, npad="auto", n_jobs=n_jobs,verbose=None)
+
+    # Remove "slow drifts" before running ICA
+    filt_raw = raw_data.copy().filter(l_freq=1., h_freq=None,n_jobs=n_jobs,verbose=None)
+
+    # Instantiate ICA model with 50 components to get most of the variance
+    ica = ICA(n_components=15, max_iter="auto", random_state=97)
+    # Fit ICA model and reconstruct data
+    # .fit and .apply changes ica object in-place
+    ica.fit(filt_raw)
+    reconst_raw = raw_data.copy()
+    ica.apply(reconst_raw)
+    processed_data = reconst_raw
+
+    # Split filtered data into eyes closed and eyes open
+    open_eyes = processed_data.copy().crop(tmin=0,tmax=60)
+    closed_eyes = processed_data.copy().crop(tmin=60,tmax=120)
+    # dict useful for plotting
+    separated = {"open-eyes":open_eyes,"closed-eyes":closed_eyes}
+
+    # Create a coherence map for open_eyes and closed_eyes
+    coh_list = []
+    for name,processed_data in separated.items():
+        # Extract data & time vector from processed data
+        data, times = processed_data[:, :]
+        # convert to cupy array for faster computation
+        data = cp.asarray(data)
+        # Instantiate TimeSeries object on cupy array
+        T = TimeSeries(data.get(), sampling_rate=250)
+        ch_names = raw_data.ch_names[:-5]
+
+        # Dict for the 7 frequency bands as a cupy array
+        frequency_bands = {"delta": np.array([1,3.99]),
+                           "theta": np.array([4,7.99]),
+                           "alpha": np.array([8,12.99]),
+                           "beta": np.array([13,29.99]),
+                           "beta_1": np.array([13,17.99]),
+                           "beta_2": np.array([18,23.99]),
+                           "beta_3": np.array([24,29.99])}
+
+        # Apply the CoherenceAnalyzer on the timeseries object (nitime library)
+        C = CoherenceAnalyzer(T)
+
+        # Generate coherence matrix for each frequency band and then ravel+concatenate them into a single array
+        coherence_maps = cp.array([])
+        for key,value in frequency_bands.items():
+            # Extract frequency indices on CoherenceAnalyzer object
+            freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
+            coherence_map = cp.mean(C.coherence[:, :, freq_idx], -1)
+            coherence_map = cp.array(coherence_map[np.triu_indices(len(ch_names), k=1)])
+            # Concatenate coherence maps as cupy array
+            coherence_maps = cp.concatenate((coherence_maps, coherence_map.ravel()))
+        # Add coherence maps to list
+        coh_list.append(coherence_maps)
+    return coh_list
+
+folder_path1  = "C:\\Users\\jbhan\\Desktop\\AA_CESA-2-DATA-EEG-Resting (Anden del)\\"
+folder_path2 = "C:\\Users\\jbhan\\Desktop\\AA_CESA-2-DATA-EEG-Resting\\"
+
+# Create lists of filenames in each folder. Only use files that starts with "S" and ends with ".dat"
+file_names1 = [f for f in os.listdir(folder_path1) if f.endswith('.dat') and f.startswith('S')]
+file_names2 = [f for f in os.listdir(folder_path2) if f.endswith('.dat') and f.startswith('S')]
+# Delete the following fiels from their respective folders. They return errors...
+if 'S26_12604_R001.dat' in file_names2:
+    file_names2.remove('S26_12604_R001.dat')
+if "S195_11851_R001.dat" in file_names1:
+    file_names1.remove("S195_11851_R001.dat")
+if "S309_11498_R001.dat" in file_names1:
+    file_names1.remove("S309_11498_R001.dat")
+
+# Get id that is written between underscores (starts with underscore and ends with underscore)
+id_list1 = [f.split('_')[1].split('.')[0] for f in file_names1]
+id_list2 = [f.split('_')[1].split('.')[0] for f in file_names2]
+
+# Create a dictionary with id as key and file name as value
+id_dict1 = dict(zip(id_list1, file_names1))
+id_dict2 = dict(zip(id_list2, file_names2))
+# Concatenate dict value to respective folder path
+file_names = [folder_path1 + id_dict1[id] for id in id_list1] + [folder_path2 + id_dict2[id] for id in id_list2]
+# Change all double backslashes to single forward slashes
+file_names = [f.replace('\\','/') for f in file_names]
+# Add to dictionary with id as key and file name as value
+id_dict = dict(zip(id_list1 + id_list2, file_names))
 
 
+# Create a dictionary with id as key and coherence map as value
+coherence_maps = {}
+counter = 0
+for id,file_name in id_dict.items():
+    # Create counter that counts how many files have been processed
+    print(f"{file_name}" + " is being processed...")
+    print("Current progress: " + str(int(counter+1)) + "/" + str(len(id_dict)))
+    coherence_maps[id] = preprocessing(file_name)
+    counter += 1
+
+# Split coherence maps into two dicts. Use value index 0 for open eyes and value index 1 for closed eyes
+coherence_maps_open = {k: v[0] for k, v in coherence_maps.items()}
+coherence_maps_closed = {k: v[1] for k, v in coherence_maps.items()}
+
+# Save dictionaries as pickle files for later use
+with open('data/coherence_maps_open.pkl', 'wb') as f:
+    pickle.dump(coherence_maps_open, f)
+with open('data/coherence_maps_closed.pkl', 'wb') as f:
+    pickle.dump(coherence_maps_closed, f)
+
+
+# Create a seperate file for plotting later
 if activate_plots == True:
+    def add_arrows(axes):
+        for ax in axes:
+            freqs = ax.lines[-1].get_xdata()
+            psds = ax.lines[-1].get_ydata()
+            for freq in (50, 100, 150):
+                idx = np.searchsorted(freqs, freq)
+                # get ymax of a small region around the freq. of interest
+                y = psds[(idx - 4):(idx + 5)].max()
+                ax.arrow(x=freqs[idx], y=y + 18, dx=0, dy=-12, color='red',
+                         width=0.1, head_width=3, length_includes_head=True)
+
+
     raw_downsampled = raw_data.copy().resample(sfreq=250)
     # PSD plots for Original vs downsampled
     for data, title in zip([raw_data,raw_downsampled], ['Original Data (2000 Hz)','Downsampled Data (250Hz)']):
@@ -63,66 +196,3 @@ if activate_plots == True:
     fig.subplots_adjust(top=0.75)
     fig.suptitle("Band-pass filtered (0.5-70 Hz)", size='xx-large', weight='bold')
     plt.savefig(f"figures/band-pass.png")
-
-
-# Band-pass filtering (0.5 - 70 Hz )
-raw_data.filter(0.5, 70., fir_design='firwin')
-
-# Removing power-line noise with notch filtering
-raw_data = raw_data.notch_filter(np.arange(50,251,50), fir_design='firwin')
-
-# Downsample frequency to 250Hz
-raw_data.resample(250, npad="auto")
-
-# Remove "slow drifts" before running ICA
-filt_raw = raw_data.copy().filter(l_freq=1., h_freq=None)
-
-# Instantiate ICA model with variance threshold of 90%
-ica = ICA(n_components=0.9, max_iter='auto', random_state=97)
-
-# Fit ICA model and reconstruct data
-# .fit and .apply changes ica object in-place
-ica.fit(filt_raw)
-reconst_raw = raw_data.copy()
-ica.apply(reconst_raw)
-processed_data = reconst_raw
-
-
-open_eyes = processed_data.copy().crop(tmin=0,tmax=170)
-closed_eyes = processed_data.copy().crop(tmin=190,tmax=360)
-separated = {"open-eyes":open_eyes,"closed-eyes":closed_eyes}
-for name,processed_data in separated.items():
-    # Extract data & time vector from processed data
-    data, times = processed_data[:, :]
-    T = TimeSeries(data[:-5],sampling_rate=250)
-    ch_names = raw_data.ch_names[:-5]
-
-    # Dict for the 7 frequency bands
-    frequency_bands = {"delta": [1,3.99], "theta": [4,7.99], "alpha": [8,12.99], "beta": [13,29.99],"beta_1": [13,17.99],"beta_2": [18,23.99],"beta_3": [24,29.99]}
-
-    # Apply the CoherenAnalyzer on the timeseries object (nitime library)
-    C = CoherenceAnalyzer(T)
-
-    # Plot coherence for each frequency band
-    # for key,value in frequency_bands.items():
-    #     freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
-    #     coherence_map = np.mean(C.coherence[:, :, freq_idx], -1)
-        # print(f"coherence_map for {key}:")
-        # print(coherence_map.shape)
-        # coherence_plot = drawmatrix_channels(coherence_map, ch_names, size=[10., 10.],title=f"Coherence map for the ${key}$ freq. band ({name})", color_anchor=[0,1])
-        # plt.savefig(f"figures/coherence_{key}_{name}.png")
-
-    # Compute coherence map for each frequency band (eyes open and eyes closed), reshape to 2D array and pickle the data
-    coherence_maps = np.array([])
-    for key,value in frequency_bands.items():
-        freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
-        coherence_map = np.mean(C.coherence[:, :, freq_idx], -1)
-        # Only include one half of the map (diagonal)
-        coherence_map = coherence_map[np.triu_indices(len(ch_names), k=1)]
-        # Ravel the coherence map to 2D array and concatenate it to the coherence_maps array
-        coherence_maps = np.concatenate((coherence_maps, coherence_map.ravel()))
-    with open(f"data/coherence_maps_{name}.pkl", "wb") as f:
-        pickle.dump(coherence_maps, f)
-
-
-
