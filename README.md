@@ -10,8 +10,7 @@ The PCR and RidgeReg scripts are independent of most of the dependencies - for t
 # Info til Smilla og Sebastian:
 - data/PCA_and_Y_closed.pkl og data/PCA_and_Y_open.pkl indeholder matricerne med PCA og response variables
 - data/PCA_and_Y_and_features_open.pkl indeholder matrice med PCA og response variables og features. Har ikke lavet for closed eyes endnu
-
-#####(Disse kan bruges til PCA og RidgeReg etc (se scripts)=
+(Disse kan bruges til PCA og RidgeReg etc (se scripts)
 
 
 
