@@ -50,14 +50,16 @@ def preprocessing(file_path):
     # Remove "slow drifts" before running ICA
     filt_raw = raw_data.copy().filter(l_freq=1., h_freq=None,n_jobs=n_jobs,verbose=None)
 
-    # Instantiate ICA model with 50 components to get most of the variance
-    ica = ICA(n_components=15, max_iter="auto", random_state=97)
-    # Fit ICA model and reconstruct data
-    # .fit and .apply changes ica object in-place
-    ica.fit(filt_raw)
-    reconst_raw = raw_data.copy()
-    ica.apply(reconst_raw)
-    processed_data = reconst_raw
+    # # Instantiate ICA model with 50 components to get most of the variance
+    # ica = ICA(n_components=15, max_iter="auto", random_state=97)
+    # # Fit ICA model and reconstruct data
+    # # .fit and .apply changes ica object in-place
+    # ica.fit(filt_raw)
+    # reconst_raw = raw_data.copy()
+    # ica.apply(reconst_raw)
+    # processed_data = reconst_raw
+
+    processed_data = filt_raw
 
     # Split filtered data into eyes closed and eyes open
     open_eyes = processed_data.copy().crop(tmin=0,tmax=60)

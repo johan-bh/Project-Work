@@ -2,44 +2,55 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
+import pickle
 
-data = pd.read_pickle("data/ai_data.pkl")
 
-# Use standard scaler to scale "data", only scale last 4 columns
+# Current not working. Very slow because of the large data set.
+
+# Load the processed (non PCA) data for eyes closed and eyes open
+with open('data/coherence_maps_closed.pkl', 'rb') as f:
+    coherence_maps_closed = pickle.load(f)
+with open('data/coherence_maps_open.pkl', 'rb') as f:
+    coherence_maps_open = pickle.load(f)
+df_open = pd.DataFrame.from_dict(coherence_maps_open, orient='index')
+df_closed = pd.DataFrame.from_dict(coherence_maps_closed, orient='index')
+
+# get data/response_var_df.pkl
+with open('data/response_var_df.pkl', 'rb') as f:
+    df = pickle.load(f)
+
+# Drop rows that dont have corresponding response variables
+df.index = df.index.astype(str)
+df_closed = df_closed.drop(df_closed.index[~df_closed.index.isin(df.index)])
+df_open = df_open.drop(df_open.index[~df_open.index.isin(df.index)])
+
+# fill nan falues with mean of the given column
+df_closed = df_closed.fillna(df_closed.mean())
+df_open = df_open.fillna(df_open.mean())
+
+# Implement Ridge Regression on df_closed
+X_train, X_test, y_train, y_test = train_test_split(df_closed, df, test_size=0.2, random_state=42)
 scaler = StandardScaler()
-scaler.fit(data.iloc[:, -4:])
-data_scaled = scaler.transform(data.iloc[:, -4:])
-# convert data_scaled to dataframe
-data_scaled = pd.DataFrame(data_scaled, index=data.index, columns=data.columns[-4:])
-# Remove last 4 columns from data and append data_scaled
-data = data.iloc[:,:-4]
-data = pd.concat([data, data_scaled], axis=1)
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+# Find the best alpha value. Store in variable best_alpha
+best_alpha = 0
+best_score = 0
+for alpha in [0.001, 0.01, 0.1, 1, 10, 100]:
+    # print progress
+    print('alpha:', alpha)
+    reg = Ridge(alpha=alpha)
+    reg.fit(X_train, y_train)
+    score = reg.score(X_test, y_test)
+    if score > best_score:
+        best_alpha = alpha
+        best_score = score
+# Print the best alpha value
+print('Best alpha value:', best_alpha)
+# Fit the model with best_alpha
+reg = Ridge(alpha=best_alpha)
+reg.fit(X_train, y_train)
+# print the score
+print(reg.score(X_test, y_test))
 
-# Split data into train and test. Use last 4 columns as target
-X_train, X_test, y_train, y_test = train_test_split(data.iloc[:,:-4], data.iloc[:,-4:], test_size=0.1, random_state=42)
-# Find the best alpha value
-alphas = [0.01, 0.1, 0.5, 1, 5, 10, 50, 100, 500, 1000]
-scores = []
-for alpha in alphas:
-    reg_ridge = Ridge(alpha=alpha)
-    reg_ridge.fit(X_train, y_train)
-    scores.append(reg_ridge.score(X_test, y_test))
-# return the best alpha value
-print("\nBest alpha value: ", alphas[scores.index(max(scores))])
-alpha = alphas[scores.index(max(scores))]
-reg_ridge = Ridge(alpha=alpha)
-reg_ridge.fit(X_train, y_train)
-# Predict on 2 rows of test data
-y_pred_2rows = reg_ridge.predict(X_test.iloc[0:3,:])
-y_actual_2rows = y_test.iloc[0:3,:]
 
-# descale y_pred_2rows
-y_pred_2rows = scaler.inverse_transform(y_pred_2rows)
-# descale y_actual_2rows
-y_actual_2rows = scaler.inverse_transform(y_actual_2rows)
-# round y_pred_2rows to 1 decimal
-y_pred_2rows = y_pred_2rows.round(1)
-print("\nPredicted values:\n", y_pred_2rows)
-print("\nActual values:\n", y_actual_2rows)
-print("\nAccuracy: \n", reg_ridge.score(X_test, y_test))
-# lorte accuracy mand... :((

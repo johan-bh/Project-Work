@@ -3,41 +3,72 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-data = pd.read_pickle("data/ai_data.pkl")
-# Run linear regression on data
-reg = LinearRegression()
-# convert all columns to float
-data = data.astype(int)
+# Read matrix with PCA + Response variables (386x54) - open and closed eyes
+PCA_Y_closed = pd.read_pickle("data/PCA_and_Y_closed.pkl")
+PCA_Y_open = pd.read_pickle("data/PCA_and_Y_open.pkl")
 
-# Use standard scaler to scale "data", only scale last 4 columns
+
+# Scale last 4 columns of PCA_y_closed
 scaler = StandardScaler()
-scaler.fit(data.iloc[:, -4:])
-data_scaled = scaler.transform(data.iloc[:, -4:])
-# convert data_scaled to dataframe
-data_scaled = pd.DataFrame(data_scaled, index=data.index, columns=data.columns[-4:])
-# Remove last 4 columns from data and append data_scaled
-data = data.iloc[:,:-4]
-data = pd.concat([data, data_scaled], axis=1)
+scaler.fit(PCA_Y_closed.iloc[:, -4:])
+PCA_Y_closed.iloc[:, -4:] = scaler.transform(PCA_Y_closed.iloc[:, -4:])
 
-# Split data into train and test. Use last 4 columns as target
-X_train, X_test, y_train, y_test = train_test_split(data.iloc[:,:-4], data.iloc[:,-4:], test_size=0.1, random_state=42)
+# Train-test split
+X_train_closed, X_test_closed, y_train_closed, y_test_closed = train_test_split(
+    PCA_Y_closed.iloc[:, :-4], PCA_Y_closed.iloc[:, -4:], test_size=0.2, random_state=42)
+# Fit model
+model_closed = LinearRegression()
+model_closed.fit(X_train_closed, y_train_closed)
+# Predict
+y_pred_closed = model_closed.predict(X_test_closed)
+# Score
+score_closed = model_closed.score(X_test_closed, y_test_closed)
+print("Score closed eyes:", score_closed)
 
-# Fit the model
-reg.fit(X_train, y_train)
+# Scale last 4 columns of PCA_y_open
+scaler = StandardScaler()
+scaler.fit(PCA_Y_open.iloc[:, -4:])
+PCA_Y_open.iloc[:, -4:] = scaler.transform(PCA_Y_open.iloc[:, -4:])
 
-# Predict on 2 rows of test data
-y_pred_2rows = reg.predict(X_test.iloc[0:3,:])
-y_actual_2rows = y_test.iloc[0:3,:]
+# Train-test split
+X_train_open, X_test_open, y_train_open, y_test_open = train_test_split(
+    PCA_Y_open.iloc[:, :-4], PCA_Y_open.iloc[:, -4:], test_size=0.2, random_state=42)
+# Fit model
+model_open = LinearRegression()
+model_open.fit(X_train_open, y_train_open)
+# Predict
+y_pred_open = model_open.predict(X_test_open)
+# Score
+score_open = model_open.score(X_test_open, y_test_open)
+print("Score open eyes:", score_open)
 
-# Descale y_pred_2rows
-y_pred_2rows = scaler.inverse_transform(y_pred_2rows)
-y_actual_2rows = scaler.inverse_transform(y_actual_2rows)
+# Make predictions for closed and open eyes on 3 rows
+PCA_Y_closed_pred = model_closed.predict(PCA_Y_closed.iloc[:3, :-4])
+PCA_Y_open_pred = model_open.predict(PCA_Y_open.iloc[:3, :-4])
 
-# round y_pred_2rows to 1 decimal
-y_pred_2rows = y_pred_2rows.round(1)
-print("\nPredicted values:\n", y_pred_2rows)
-print("\nActual values:\n", y_actual_2rows)
-print("\nAccuracy: \n", reg.score(X_test, y_test))
+# Get actual values for closed and open eyes on 3 rows
+PCA_Y_closed_actual = PCA_Y_closed.iloc[:3, -4:]
+PCA_Y_open_actual = PCA_Y_open.iloc[:3, -4:]
+# Inverse transform to get actual values
+PCA_Y_closed_actual = scaler.inverse_transform(PCA_Y_closed_actual)
+PCA_Y_open_actual = scaler.inverse_transform(PCA_Y_open_actual)
+# Inverse transform to get predicted values
+PCA_Y_closed_pred = scaler.inverse_transform(PCA_Y_closed_pred)
+PCA_Y_open_pred = scaler.inverse_transform(PCA_Y_open_pred)
+
+PCA_Y_closed_pred = PCA_Y_closed_pred.round(1)
+PCA_Y_open_pred = PCA_Y_open_pred.round(1)
+
+# compare actual and predicted values
+print("Actual values for closed eyes:\n", PCA_Y_closed_actual)
+print("Predicted values for closed eyes:\n", PCA_Y_closed_pred)
+
+# Compute relative error between actual and predicted values
+relative_error_closed = (PCA_Y_closed_actual - PCA_Y_closed_pred) / PCA_Y_closed_actual
+relative_error_open = (PCA_Y_open_actual - PCA_Y_open_pred) / PCA_Y_open_actual
+print("Relative error for closed eyes:\n", relative_error_closed)
+print("Relative error for open eyes:\n", relative_error_open)
+
 
 
 
