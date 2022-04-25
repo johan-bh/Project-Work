@@ -78,4 +78,12 @@ data = pd.concat([data,temp_df], axis=1)
 # Save the PCA +  response vars (Y) matrix to a pickle file (open eyes)
 data.to_pickle("data/PCA_and_Y_and_features_open.pkl")
 
+#featuresY=data
+#featuresY.drop(featuresY.iloc[:, 0:50], inplace = True, axis = 1)
+#Changing strings to integres
+#Features_Y=Features_Y.replace(to_replace =["Samlevende", "samlevende", "Søskende"], value = 1)
+#Features_Y=Features_Y.replace(to_replace =["Enke", "Nej15756"], value = 0)
+#PCA_open_features_Y=PCA_open_features_Y.replace(to_replace =["Samlevende", "samlevende", "Søskende"], value = 1)
+#PCA_open_features_Y=PCA_open_features_Y.replace(to_replace =["Enke", "Nej15756"], value = 0)
+
 # Create matrix with PCA + features + response vars (Y) matrix (closed eyes)....
