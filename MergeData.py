@@ -86,7 +86,7 @@ def Merge_PCA_Features_ResponseVar(response_var,eyes):
     return data_merge
 
 # Merge PCA + Features + Response Vars
-response_vars = ["All4"]
+response_vars = ['MMSE', 'ACE', 'TrailMakingA', 'TrailMakingB','All4']
 for n in ["closed","open"]:
     for m in response_vars:
         Merge_PCA_Features_ResponseVar(m,n)
