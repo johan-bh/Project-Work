@@ -1,89 +1,110 @@
 import pandas as pd
 
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', None)
-file_path = "C:\\Users\\jbhan\\Desktop\\neurotest.xlsx"
+# # <==== Merge: PCA + Response Vars =====>
+# # Read second tab of excel file
+# df = pd.read_excel(file_path,sheet_name="CESA II")
+# # set cmsk column as index
+# df.set_index('cmsk', inplace=True)
+# # Only include columns MMSE, ACE and TrailMakingA and TrailMakingB. Keep index as is
+# df = df[['MMSE', 'ACE', 'TrailMakingA', 'TrailMakingB']]
+# # Remove entries with missing values (NaN)
+# df = df.dropna()
+#
+# # load valid_ids.csv from data folder and set first column as index
+# valid_ids = pd.read_csv("data/valid_ids.csv", index_col=0)
+# # convert first column to list
+# valid_ids = valid_ids.iloc[:,0].tolist()
+# # Delete all rows that are not in valid_ids
+# df = df.drop(df.index[~df.index.isin(valid_ids)])
+# # Save to pickle file
+# df.to_pickle("data/response_var_df.pkl")
+
+df = pd.read_pickle('data/response_var_df.pkl')
+
 
 # <==== Merge: PCA + Response Vars =====>
-# Read second tab of excel file
-df = pd.read_excel(file_path,sheet_name="CESA II")
-# set cmsk column as index
-df.set_index('cmsk', inplace=True)
-# Only include columns MMSE, ACE and TrailMakingA and TrailMakingB. Keep index as is
-df = df[['MMSE', 'ACE', 'TrailMakingA', 'TrailMakingB']]
-# Remove entries with missing values (NaN)
-df = df.dropna()
 
-# load valid_ids.csv from data folder and set first column as index
-valid_ids = pd.read_csv("data/valid_ids.csv", index_col=0)
-# convert first column to list
-valid_ids = valid_ids.iloc[:,0].tolist()
-# Delete all rows that are not in valid_ids
-df = df.drop(df.index[~df.index.isin(valid_ids)])
-# Save to pickle file
-df.to_pickle("data/response_var_df.pkl")
+def PCA_Feature_Y_Dims():
+    """Returns a dataframe "features" which has the dimensions of the overlap between PCA, Features and Y"""
+    pca_dimension = pd.DataFrame(pd.read_pickle("data/pca_open.pkl").components_.T)
+    pca_dimension.set_index(df.index, inplace=True)
+    pca_dimension = pd.concat([pca_dimension, df], axis=1)
+    features = pd.read_pickle("data/clean_features.pkl")
+    pca_dimension = pca_dimension.drop(pca_dimension.index[~pca_dimension.index.isin(features.index)])
+    features = features.drop(features.index[~features.index.isin(pca_dimension.index)])
+    return features
 
-# open "data/pca_closed.pkl"
-pca_closed = pd.read_pickle("data/pca_closed.pkl")
+# create function to Merge PCA with Y
+def Merge_PCA_Y(eyes):
+    """
+    Merge PCA with response vars
+    :param eyes: string ("closed" or "open")
+    :return: Merged dataframe (which is also saved)
+    """
+    if eyes == "closed":
+        data = pd.DataFrame(pd.read_pickle("data/pca_closed.pkl").components_.T)
+    elif eyes == "open":
+        data = pd.DataFrame(pd.read_pickle("data/pca_open.pkl").components_.T)
+    Y = pd.read_pickle("data/response_var_df.pkl")
+    data.set_index(Y.index, inplace=True)
+    data = pd.concat([data,Y], axis=1)
+    # Save the PCA +  response vars (Y) matrix to a pickle file
+    data.to_pickle("data/PCA+Y-"+eyes.upper()+".pkl")
+    return data
 
-pca_closed = pca_closed.components_.T
-# convert pca_closed to dataframe
-pca_closed = pd.DataFrame(pca_closed)
+# Merge PCA with Y
+for n in ["closed","open"]:
+    Merge_PCA_Y(n)
 
-# Set index of pca_closed to index of df (neuro test dataframe)
-pca_closed.set_index(df.index, inplace=True)
+def Merge_PCA_Features_ResponseVar(response_var,eyes):
+    """Merge PCA with Features and Response Vars
+    :param response_var: string (specific var name or "All4")
+    :param eyes: string ("closed" or "open")
+    :return: Merged dataframe (which is also saved)
+    """
+    data = Merge_PCA_Y(eyes)
 
-# Append df to pca_closed. This is the matrix we want to use for regression
-data = pd.concat([pca_closed, df], axis=1)
+    if response_var == "All4":
+        response_df = data.iloc[:, -4:]
+    else:
+        response_df = data[response_var]
 
-# Save the PCA +  response vars (Y) matrix to a pickle file (closed)
-data.to_pickle("data/PCA_and_Y_closed.pkl")
+    # get dimensions of PCA + Feature + Response Vars
+    features = PCA_Feature_Y_Dims()
+    # drop rows in data that are not in features
+    data = data.drop(data.index[~data.index.isin(features.index)])
+    response_df = response_df.drop(response_df.index[~response_df.index.isin(features.index)])
+    pca_only = data.iloc[:, :50]
+    # Append features to PCA data
+    # set index of features to be the same as pca_only
+    features.set_index(pca_only.index, inplace=True)
+    data_merge = pd.concat([pca_only,features], axis=1)
+    # Append response_df to data_merge. This is the matrix we want to use for regression (with x features)
+    data_merge = pd.concat([data_merge,response_df], axis=1)
+    # Save the PCA + Features + x response vars to matrix to a pickle file
+    data_merge.to_pickle("data/PCA+Features+"+response_var+"-"+eyes.upper()+".pkl")
+    return data_merge
 
-# open "data/pca_open.pkl"
-pca_open = pd.read_pickle("data/pca_open.pkl")
+# Merge PCA + Features + Response Vars
+response_vars = ["All4"]
+for n in ["closed","open"]:
+    for m in response_vars:
+        Merge_PCA_Features_ResponseVar(m,n)
 
-pca_open = pca_open.components_.T
-# convert pca_open to dataframe
-pca_open = pd.DataFrame(pca_open)
 
-# set index of pca_open to index of df (neuro test dataframe)
-pca_open.set_index(df.index, inplace=True)
+def Merge_Features_Y():
+    """Merge Features with Response Vars"""
+    features = pd.DataFrame(pd.read_pickle("data/clean_features.pkl"))
+    response_vars = pd.DataFrame(pd.read_pickle("data/response_var_df.pkl"))
+    # drop rows in response_vars that are not in features
+    response_vars = response_vars.drop(response_vars.index[~response_vars.index.isin(features.index)])
+    # drop rows in features that are not in response_vars
+    features = features.drop(features.index[~features.index.isin(response_vars.index)])
+    # append response_vars to features
+    data = pd.concat([features,response_vars], axis=1)
+    # Save the Features +  response vars (Y) matrix to a pickle file
+    data.to_pickle("data/Features+Y.pkl")
+    return data
 
-# Append df to pca_open. This is the matrix we want to use for analysis (without features)
-data = pd.concat([pca_open, df], axis=1)
-
-# Save the PCA +  response vars (Y) matrix to a pickle file (open)
-data.to_pickle("data/PCA_and_Y_open.pkl")
-# < ====== END  =======>
-
-# < ====== Merge Data: PCA + Features + Response Vars =======>
-features = pd.read_pickle("data/clean_features.pkl")
-# remove the rows in data if their index is not in features
-data = data.drop(data.index[~data.index.isin(features.index)])
-
-# remove the rows in features if their index is not in data
-features = features.drop(features.index[~features.index.isin(data.index)])
-
-# store last 4 columns of data in temporary df
-temp_df = data.iloc[:, -4:]
-# remove last 4 columns of data
-data = data.iloc[:, :-4]
-
-# Append features to data. T
-data = pd.concat([data,features], axis=1)
-
-# Append temp_df to data. This is the matrix we want to use for regression (with features)
-data = pd.concat([data,temp_df], axis=1)
-
-# Save the PCA +  response vars (Y) matrix to a pickle file (open eyes)
-data.to_pickle("data/PCA_and_Y_and_features_open.pkl")
-
-#featuresY=data
-#featuresY.drop(featuresY.iloc[:, 0:50], inplace = True, axis = 1)
-#Changing strings to integres
-#Features_Y=Features_Y.replace(to_replace =["Samlevende", "samlevende", "Søskende"], value = 1)
-#Features_Y=Features_Y.replace(to_replace =["Enke", "Nej15756"], value = 0)
-#PCA_open_features_Y=PCA_open_features_Y.replace(to_replace =["Samlevende", "samlevende", "Søskende"], value = 1)
-#PCA_open_features_Y=PCA_open_features_Y.replace(to_replace =["Enke", "Nej15756"], value = 0)
-
-# Create matrix with PCA + features + response vars (Y) matrix (closed eyes)....
+# Merge Features + Y
+Merge_Features_Y()

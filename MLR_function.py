@@ -12,11 +12,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 # Read matrix with PCA + Response variables (386x54) - open and closed eyes
-PCA_Y_closed = pd.read_pickle("data/PCA_and_Y_closed.pkl")
-PCA_Y_open = pd.read_pickle("data/PCA_and_Y_open.pkl")
-Features_Y = pd.read_pickle("data/Features_and_Y.pkl")
-PCA_open_features_Y = pd.read_pickle("data/PCA_and_Y_and_features_open_nostrings.pkl")
-
+PCA_Y_closed = pd.read_pickle("data/PCA+Y-CLOSED.pkl")
+PCA_Y_open = pd.read_pickle("data/PCA+Y-OPEN.pkl")
+Features_Y = pd.read_pickle("data/Features+Y.pkl")
+PCA_open_features_Y = pd.read_pickle("data/PCA+Features+All4-OPEN.pkl")
 
 
 def MLR(A, A_navn):
@@ -30,8 +29,6 @@ def MLR(A, A_navn):
     # Fit model
     model = LinearRegression()
     model.fit(X_train, y_train)
-    # Predict
-    y_pred = model.predict(X_test)
     # Score
     score_features = model.score(X_test, y_test)
     print("Score {}:".format(A_navn), score_features)
@@ -55,9 +52,11 @@ def MLR(A, A_navn):
 
     # Compute relative error between actual and predicted values
     relative_error_features = (A_actual - A_pred) / A_actual
+    # Compute relative
     print("Relative error for {} :\n".format(A_navn), relative_error_features)
 
 MLR(PCA_Y_closed, "PCA closed eyes")
 MLR(PCA_Y_open, "PCR closed eyes")
 MLR(Features_Y, "Only Features")
 MLR(PCA_open_features_Y, "PCA for open eyes and Features")
+

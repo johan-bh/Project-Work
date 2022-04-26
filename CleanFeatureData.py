@@ -36,8 +36,8 @@ df["IL-10"] = df["IL-10"].fillna(df["IL-10"].mean())
 # replace all nan values in df["HSCRP"] with mean of HSCRP
 df["HSCRP"] = df["HSCRP"].fillna(df["HSCRP"].mean())
 
-# replace "Gift" with 1 and "Enlig" with 0 in df["civilstatus"]
-df["civilstatus"] = df["civilstatus"].replace(["Gift", "Enlig"], [1, 0])
+# replace "Gift" / "Samlevende" with 1 and "Enlig" / "Enk" with 0 in df["civilstatus"]
+df["civilstatus"] = df["civilstatus"].replace(["Gift", "Samlevende", "Enlig", "Enke"], [1,1,0, 0])
 # replace all nan values with most frequent value in df["civilstatus"]
 df["civilstatus"] = df["civilstatus"].fillna(df["civilstatus"].mode()[0])
 
@@ -54,23 +54,29 @@ df["rygning"] = df["rygning"].fillna(df["rygning"].mode()[0])
 df["BMI"] = df["BMI"].fillna(df["BMI"].mean())
 
 
-# replace "Nej" with 0 and "Mor" or "Far" with 1 in df["familiecerebrovaskulaer"]
-df["familiecerebrovaskulaer"] = df["familiecerebrovaskulaer"].replace(["Nej", "Mor", "Far"], [0, 1, 1])
+# replace "Nej" with 0 and "Mor", "Far" or "Søskende" with 1 in df["familiecerebrovaskulaer"]
+# print(df["familiecerebrovaskulaer"].unique())
+df["familiecerebrovaskulaer"] = df["familiecerebrovaskulaer"].replace(["Nej", "Nej15756","Mor", "Far","Søskende"], [0, 0, 1, 1, 1])
 # replace all nan values with most frequent value in df["familiecerebrovaskulaer"]
 df["familiecerebrovaskulaer"] = df["familiecerebrovaskulaer"].fillna(df["familiecerebrovaskulaer"].mode()[0])
 
-# replace "Nej" with 0 and "Mor" or "Far" with 1 in df["familiemyokardieinfarkt"]
-df["familiemyokardieinfarkt"] = df["familiemyokardieinfarkt"].replace(["Nej", "Mor", "Far"], [0, 1, 1])
+# print(df["familiemyokardieinfarkt"].unique())
+# replace "Nej" with 0 and "Mor", "Far" or "Søskende" with 1 in df["familiemyokardieinfarkt"]
+df["familiemyokardieinfarkt"] = df["familiemyokardieinfarkt"].replace(["Nej", "Mor", "Far", "Søskende"], [0, 1, 1,1])
 # replace all nan values with most frequent value in df["familiemyokardieinfarkt"]
 df["familiemyokardieinfarkt"] = df["familiemyokardieinfarkt"].fillna(df["familiemyokardieinfarkt"].mode()[0])
 
 # replace "Nej" with 0 and "Mor" or "Far" with 1 in df["familiedemens"]
-df["familiedemens"] = df["familiedemens"].replace(["Nej", "Mor", "Far"], [0, 1, 1])
+df["familiedemens"] = df["familiedemens"].replace(["Nej", "Mor", "Far", "Søskende"], [0, 1, 1, 1])
 # replace all nan values with most frequent value in df["familiedemens"]
 df["familiedemens"] = df["familiedemens"].fillna(df["familiedemens"].mode()[0])
 
 # # check number of nan values in df
 # print(df.isnull().sum())
+# Check for unique values to make sure data has been cleaned properly.
+# for col in df:
+#     print(col)
+#     print(df[col].unique())
 
 
 valid_ids = pd.read_csv("data/valid_ids.csv", index_col=0)
