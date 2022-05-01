@@ -2,174 +2,192 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+import numpy as np
 
-# Read matrix with PCA + Response variables (386x54) - open and closed eyes
-PCA_Y_closed = pd.read_pickle("data/PCA_and_Y_closed.pkl")
-PCA_Y_open = pd.read_pickle("data/PCA_and_Y_open.pkl")
-Features_Y = pd.read_pickle("data/Features_and_Y.pkl")
+# Load all data combinations
+PCA_Y_CLOSED = pd.read_pickle("data/PCA+Y-CLOSED.pkl")
+PCA_Y_OPEN = pd.read_pickle("data/PCA+Y-OPEN.pkl")
+PCA_FEATS_Y_OPEN = pd.read_pickle("data/PCA+Features+All4-OPEN.pkl")
+PCA_FEATS_Y_CLOSED = pd.read_pickle("data/PCA+Features+All4-CLOSED.pkl")
+PCA_FEATS_ACE_OPEN = pd.read_pickle("data/PCA+Features+ACE-OPEN.pkl")
+PCA_FEATS_ACE_CLOSED = pd.read_pickle("data/PCA+Features+ACE-CLOSED.pkl")
+PCA_FEATS_MMSE_OPEN = pd.read_pickle("data/PCA+Features+MMSE-OPEN.pkl")
+PCA_FEATS_MMSE_CLOSED = pd.read_pickle("data/PCA+Features+MMSE-CLOSED.pkl")
+PCA_FEATS_TrailA_OPEN = pd.read_pickle("data/PCA+Features+TrailMakingA-OPEN.pkl")
+PCA_FEATS_TrailA_CLOSED = pd.read_pickle("data/PCA+Features+TrailMakingA-CLOSED.pkl")
+PCA_FEATS_TrailB_OPEN = pd.read_pickle("data/PCA+Features+TrailMakingB-OPEN.pkl")
+PCA_FEATS_TrailB_CLOSED = pd.read_pickle("data/PCA+Features+TrailMakingB-CLOSED.pkl")
+Features_Y = pd.read_pickle("data/Features+Y.pkl")
 
-
-# Scale last 4 columns of PCA_y_closed
-scaler = StandardScaler()
-scaler.fit(PCA_Y_closed.iloc[:, -4:])
-PCA_Y_closed.iloc[:, -4:] = scaler.transform(PCA_Y_closed.iloc[:, -4:])
-
-# Train-test split
-X_train_closed, X_test_closed, y_train_closed, y_test_closed = train_test_split(
-    PCA_Y_closed.iloc[:, :-4], PCA_Y_closed.iloc[:, -4:], test_size=0.2, random_state=42)
+# PCA and Response variables (closed)
+# Train test split using last 4 columns as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_Y_CLOSED.iloc[:, :-4], PCA_Y_CLOSED.iloc[:, -4:], test_size=0.2, random_state=42)
 # Fit model
-model_closed = LinearRegression()
-model_closed.fit(X_train_closed, y_train_closed)
-# Predict
-y_pred_closed = model_closed.predict(X_test_closed)
+model = LinearRegression()
+model.fit(X_train, y_train)
 # Score
-score_closed = model_closed.score(X_test_closed, y_test_closed)
-print("Score closed eyes:", score_closed)
+score_PCA_Y_CLOSED = model.score(X_test, y_test)
+print("Score PCA+Y-CLOSED:", score_PCA_Y_CLOSED)
 
-# Scale last 4 columns of PCA_y_open
-scaler = StandardScaler()
-scaler.fit(PCA_Y_open.iloc[:, -4:])
-PCA_Y_open.iloc[:, -4:] = scaler.transform(PCA_Y_open.iloc[:, -4:])
-
-# Train-test split
-X_train_open, X_test_open, y_train_open, y_test_open = train_test_split(
-    PCA_Y_open.iloc[:, :-4], PCA_Y_open.iloc[:, -4:], test_size=0.2, random_state=42)
+# PCA and Response variables (open)
+# Train test split using last 4 columns as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_Y_OPEN.iloc[:, :-4], PCA_Y_OPEN.iloc[:, -4:], test_size=0.2, random_state=42)
 # Fit model
-model_open = LinearRegression()
-model_open.fit(X_train_open, y_train_open)
-# Predict
-y_pred_open = model_open.predict(X_test_open)
+model = LinearRegression()
+model.fit(X_train, y_train)
 # Score
-score_open = model_open.score(X_test_open, y_test_open)
-print("Score open eyes:", score_open)
+score_PCA_Y_OPEN = model.score(X_test, y_test)
+print("Score PCA+Y-OPEN:", score_PCA_Y_OPEN)
 
-# Make predictions for closed and open eyes on 3 rows
-PCA_Y_closed_pred = model_closed.predict(PCA_Y_closed.iloc[:3, :-4])
-PCA_Y_open_pred = model_open.predict(PCA_Y_open.iloc[:3, :-4])
-
-# Get actual values for closed and open eyes on 3 rows
-PCA_Y_closed_actual = PCA_Y_closed.iloc[:3, -4:]
-PCA_Y_open_actual = PCA_Y_open.iloc[:3, -4:]
-# Inverse transform to get actual values
-PCA_Y_closed_actual = scaler.inverse_transform(PCA_Y_closed_actual)
-PCA_Y_open_actual = scaler.inverse_transform(PCA_Y_open_actual)
-# Inverse transform to get predicted values
-PCA_Y_closed_pred = scaler.inverse_transform(PCA_Y_closed_pred)
-PCA_Y_open_pred = scaler.inverse_transform(PCA_Y_open_pred)
-
-PCA_Y_closed_pred = PCA_Y_closed_pred.round(1)
-PCA_Y_open_pred = PCA_Y_open_pred.round(1)
-
-# compare actual and predicted values
-print("Actual values for closed eyes:\n", PCA_Y_closed_actual)
-print("Predicted values for closed eyes:\n", PCA_Y_closed_pred)
-
-# Compute relative error between actual and predicted values
-relative_error_closed = (PCA_Y_closed_actual - PCA_Y_closed_pred) / PCA_Y_closed_actual
-relative_error_open = (PCA_Y_open_actual - PCA_Y_open_pred) / PCA_Y_open_actual
-print("Relative error for closed eyes:\n", relative_error_closed)
-print("Relative error for open eyes:\n", relative_error_open)
+# PCA, Features and Response variables (open)
+# Train test split using last 4 columns as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_Y_OPEN.iloc[:, :-4], PCA_FEATS_Y_OPEN.iloc[:, -4:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_Y_OPEN = model.score(X_test, y_test)
+print("Score PCA+Features+Y-OPEN:", score_PCA_FEATS_Y_OPEN)
 
 
+# PCA, Features and Response variables (closed)
+# Train test split using last 4 columns as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_Y_CLOSED.iloc[:, :-4], PCA_FEATS_Y_CLOSED.iloc[:, -4:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_Y_CLOSED = model.score(X_test, y_test)
+print("Score PCA+Features+Y-CLOSED:", score_PCA_FEATS_Y_CLOSED)
 
 
+# PCA, Features and ACE variables (open)
+# Train test split using last column as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_ACE_OPEN.iloc[:, :-1], PCA_FEATS_ACE_OPEN.iloc[:, -1:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_ACE_OPEN = model.score(X_test, y_test)
+print("Score PCA+Features+ACE-OPEN:", score_PCA_FEATS_ACE_OPEN)
 
+# PCA, Features and ACE variables (closed)
+# Train test split using last column as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_ACE_CLOSED.iloc[:, :-1], PCA_FEATS_ACE_CLOSED.iloc[:, -1:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_ACE_CLOSED = model.score(X_test, y_test)
+print("Score PCA+Features+ACE-CLOSED:", score_PCA_FEATS_ACE_CLOSED)
 
-#Multiple Linear Regression on only Features
-Features_Y = pd.read_pickle("data/Features_and_Y.pkl")
+# PCA, Features and MMSE variables (open)
+# Train test split using last column as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_MMSE_OPEN.iloc[:, :-1], PCA_FEATS_MMSE_OPEN.iloc[:, -1:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_MMSE_OPEN = model.score(X_test, y_test)
 
-#Changing strings to integres
-#mapping = {'Samlevende': 1, 'Enke':0, 'Søskende':1}
-#Features_Y=Features_Y.replace({'civilstatus': mapping, 'familiedmens': mapping})
-Features_Y=Features_Y.replace(to_replace =["Samlevende", "samlevende", "Søskende"], value = 1)
-Features_Y=Features_Y.replace(to_replace =["Enke", "Nej15756"], value = 0)
+# PCA, Features and MMSE variables (closed)
+# Train test split using last column as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_MMSE_CLOSED.iloc[:, :-1], PCA_FEATS_MMSE_CLOSED.iloc[:, -1:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_MMSE_CLOSED = model.score(X_test, y_test)
+print("Score PCA+Features+MMSE-CLOSED:", score_PCA_FEATS_MMSE_CLOSED)
 
-# Scale last 4 columns of Features_Y
-scaler = StandardScaler()
-scaler.fit(Features_Y.iloc[:, -4:])
-Features_Y.iloc[:, -4:] = scaler.transform(Features_Y.iloc[:, -4:])
+# PCA, Features and TrailA variables (open)
+# Train test split using last column as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_TrailA_OPEN.iloc[:, :-1], PCA_FEATS_TrailA_OPEN.iloc[:, -1:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_TrailA_OPEN = model.score(X_test, y_test)
+print("Score PCA+Features+TrailA-OPEN:", score_PCA_FEATS_TrailA_OPEN)
 
-# Train-test split
+# PCA, Features and TrailA variables (closed)
+# Train test split using last column as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_TrailA_CLOSED.iloc[:, :-1], PCA_FEATS_TrailA_CLOSED.iloc[:, -1:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_TrailA_CLOSED = model.score(X_test, y_test)
+print("Score PCA+Features+TrailA-CLOSED:", score_PCA_FEATS_TrailA_CLOSED)
+# Compute relative error for X_test and y_test
+y_pred = model.predict(X_test)
+relative_error = np.mean(np.abs(y_pred - y_test) / y_test)
+print("Relative error (PCA+Features+TrailA-CLOSED):", relative_error[0])
+
+# PCA, Features and TrailB variables (open)
+# Train test split using last column as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_TrailB_OPEN.iloc[:, :-1], PCA_FEATS_TrailB_OPEN.iloc[:, -1:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_TrailB_OPEN = model.score(X_test, y_test)
+print("Score PCA+Features+TrailB-OPEN:", score_PCA_FEATS_TrailB_OPEN)
+# Compute relative error for X_test and y_test
+y_pred = model.predict(X_test)
+relative_error = np.mean(np.abs(y_pred - y_test) / y_test)
+print("Relative error (PCA+Features+TrailB-OPEN):", relative_error[0])
+
+# PCA, Features and TrailB variables (closed)
+# Train test split using last column as target
+X_train, X_test, y_train, y_test = train_test_split(
+    PCA_FEATS_TrailB_CLOSED.iloc[:, :-1], PCA_FEATS_TrailB_CLOSED.iloc[:, -1:], test_size=0.2, random_state=42)
+# Fit model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# Score
+score_PCA_FEATS_TrailB_CLOSED = model.score(X_test, y_test)
+print("Score PCA+Features+TrailB-CLOSED:", score_PCA_FEATS_TrailB_CLOSED)
+
+# Features and Y variables.
+# Train test split using last 4 columns as target
 X_train, X_test, y_train, y_test = train_test_split(
     Features_Y.iloc[:, :-4], Features_Y.iloc[:, -4:], test_size=0.2, random_state=42)
 # Fit model
 model = LinearRegression()
 model.fit(X_train, y_train)
-# Predict
-y_pred = model.predict(X_test)
 # Score
-score_features = model.score(X_test, y_test)
-print("Score only Features:", score_features)
+score_FEATS_Y = model.score(X_test, y_test)
+print("Score Features+Y:", score_FEATS_Y)
 
-# Make predictions on 3 rows
-Features_pred = model.predict(Features_Y.iloc[:3, :-4])
-
-# Get actual values on 3 rows
-Features_actual = Features_Y.iloc[:3, -4:]
-
-# Inverse transform to get actual values
-Features_actual = scaler.inverse_transform(Features_actual)
-
-# Inverse transform to get predicted values
-Features_pred = scaler.inverse_transform(Features_pred)
-Features_pred = Features_pred.round(1)
-
-#Compare predicted and actual
-print("Actual values for Features:\n", Features_actual)
-print("Predicted values for Features:\n", Features_pred)
-
-# Compute relative error between actual and predicted values
-relative_error_features = (Features_actual - Features_pred) / Features_actual
-print("Relative error for only featuress:\n", relative_error_features)
-
-
-
-#PCR on features and eyes open
-#Multiple Linear Regression on only Features
-PCR_Features_Y = pd.read_pickle("data/PCA_and_Y_and_features_open.pkl")
-
-#Changing strings to integres
-#mapping = {'Samlevende': 1, 'Enke':0, 'Søskende':1}
-#Features_Y=Features_Y.replace({'civilstatus': mapping, 'familiedmens': mapping})
-PCR_Features_Y=PCR_Features_Y.replace(to_replace =["Samlevende", "samlevende", "Søskende"], value = 1)
-PCR_Features_Y=PCR_Features_Y.replace(to_replace =["Enke", "Nej15756"], value = 0)
-
-# Scale last 4 columns of Features_Y
-scaler = StandardScaler()
-scaler.fit(PCR_Features_Y.iloc[:, -4:])
-PCR_Features_Y.iloc[:, -4:] = scaler.transform(PCR_Features_Y.iloc[:, -4:])
-
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(
-    PCR_Features_Y.iloc[:, :-4], PCR_Features_Y.iloc[:, -4:], test_size=0.2, random_state=42)
-# Fit model
-model = LinearRegression()
-model.fit(X_train, y_train)
-# Predict
-y_pred = model.predict(X_test)
-# Score
-score_features = model.score(X_test, y_test)
-print("Score only Features:", score_features)
-
-# Make predictions on 3 rows
-Features_pred = model.predict(PCR_Features_Y.iloc[:3, :-4])
-
-# Get actual values on 3 rows
-Features_actual = PCR_Features_Y.iloc[:3, -4:]
-
-# Inverse transform to get actual values
-Features_actual = scaler.inverse_transform(Features_actual)
-
-# Inverse transform to get predicted values
-Features_pred = scaler.inverse_transform(Features_pred)
-Features_pred = Features_pred.round(1)
-
-#Compare predicted and actual
-print("Actual values for Features:\n", Features_actual)
-print("Predicted values for Features:\n", Features_pred)
-
-# Compute relative error between actual and predicted values
-relative_error_features = (Features_actual - Features_pred) / Features_actual
-print("Relative error for only featuress:\n", relative_error_features)
-
-
+# Create a dataframe with the scores
+scores = pd.DataFrame(
+    {
+        'PCA+Y-CLOSED': [score_PCA_Y_CLOSED],
+        'PCA+Y-OPEN': [score_PCA_Y_OPEN],
+        'PCA+Features+Y-Open': score_PCA_FEATS_Y_OPEN,
+        'PCA+Features+Y-Closed': score_PCA_FEATS_Y_CLOSED,
+        'PCA+Features+ACE-OPEN': score_PCA_FEATS_ACE_OPEN,
+        'PCA+Features+ACE-CLOSED': [score_PCA_FEATS_ACE_CLOSED],
+        'PCA+Features+MMSE-CLOSED': [score_PCA_FEATS_MMSE_CLOSED],
+        'PCA+Features+TrailA-OPEN': [score_PCA_FEATS_TrailA_OPEN],
+        'PCA+Features+TrailA-CLOSED': [score_PCA_FEATS_TrailA_CLOSED],
+        'PCA+Features+TrailB-OPEN': [score_PCA_FEATS_TrailB_OPEN],
+        'PCA+Features+TrailB-CLOSED': [score_PCA_FEATS_TrailB_CLOSED],
+        'Features+Y': [score_FEATS_Y]})
+scores = scores.T
+scores.columns = ['Score']
+print(f"\n\nAccuracy score for all combinations of PCA,Features and Response Variables (open/closed)\n{scores}")
