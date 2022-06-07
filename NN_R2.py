@@ -32,7 +32,7 @@ n_replicates = 1        # number of networks trained in each k-fold
 max_iter = 100000
 
 # K-fold crossvalidation
-K = 3                   # only three folds to speed up this example
+K = 5                   # only three folds to speed up this example
 CV = model_selection.KFold(K, shuffle=True)
 
 # Define the model
