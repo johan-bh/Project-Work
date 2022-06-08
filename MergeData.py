@@ -18,6 +18,8 @@ def PCA_Feature_Y_Dims():
     features = features.drop(features.index[~features.index.isin(pca_dimension.index)])
     return features
 
+# print(PCA_Feature_Y_Dims())
+
 # create function to Merge PCA with Y
 def Merge_PCA_Y(eyes):
     """
@@ -31,27 +33,33 @@ def Merge_PCA_Y(eyes):
         data = pd.DataFrame(pd.read_pickle("data/pca_open.pkl").components_.T)
     Y = pd.read_pickle("data/response_var_df.pkl")
     data.set_index(Y.index, inplace=True)
+
+    # concatenate data and each column of Y separately
+    for n in range(len(Y.columns)):
+        data = data
+        data_x = pd.concat([data,Y.iloc[:,n]], axis=1)
+        # get column name of Y
+        column_name = Y.columns[n]
+        data_x.to_pickle(f"data/PCA+{column_name}-"+eyes.upper()+".pkl")
+
+    # concate data with Y (all response vars)
     data = pd.concat([data,Y], axis=1)
-    # Save the PCA +  response vars (Y) matrix to a pickle file
+    # Save the PCA + Y matrix to a pickle file
     data.to_pickle("data/PCA+Y-"+eyes.upper()+".pkl")
     return data
 
-# Merge PCA with Y
+# # Merge PCA with Y
 # for n in ["closed","open"]:
 #     Merge_PCA_Y(n)
 
-def Merge_PCA_Features_ResponseVar(response_var,eyes):
+def Merge_PCA_Features_ResponseVar(eyes):
     """Merge PCA with Features and Response Vars
-    :param response_var: string (specific var name or "All4")
+    :param response_var: string (specific var name or "Y" - all response vars)
     :param eyes: string ("closed" or "open")
     :return: Merged dataframe (which is also saved)
     """
     data = Merge_PCA_Y(eyes)
-
-    if response_var == "All4":
-        response_df = data.iloc[:, -4:]
-    else:
-        response_df = data[response_var]
+    response_df = data.iloc[:, -6:]
 
     # get dimensions of PCA + Feature + Response Vars
     features = PCA_Feature_Y_Dims()
@@ -70,10 +78,8 @@ def Merge_PCA_Features_ResponseVar(response_var,eyes):
     return data_merge
 
 # Merge PCA + Features + Response Vars
-# response_vars = ['MMSE', 'ACE', 'TrailMakingA', 'TrailMakingB','All4']
 # for n in ["closed","open"]:
-#     for m in response_vars:
-#         Merge_PCA_Features_ResponseVar(m,n)
+#     Merge_PCA_Features_ResponseVar(n)
 
 
 def Merge_Features_Y():
@@ -122,25 +128,48 @@ def Merge_Coherence_Y():
     # drop rows in df that are not in df_open
     df = df.drop(df.index[~df.index.isin(df_open.index)])
 
-    print("Filling in missing values...")
-    start = time.time()
-    # Fill nan with column mean
-    for i in df_closed.columns[df_closed.isnull().any(axis=0)]:
-        df_closed[i].fillna(df_closed[i].mean(), inplace=True)
-    for i in df_open.columns[df_open.isnull().any(axis=0)]:
-        df_open[i].fillna(df_open[i].mean(), inplace=True)
-    end = time.time()
-    print(f"Time to fill nans: {end - start}")
 
     # Append df to df_closed and df_open
     df_closed = pd.concat([df_closed,df], axis=1)
     df_open = pd.concat([df_open,df], axis=1)
     # Save the Coherence +  response vars (Y) matrix to a pickle file
-    # convert to numpy array
-    df_closed = df_closed.to_numpy()
-    df_open = df_open.to_numpy()
-    # save to pickle file
-    df_closed.to_pickle("data/Coherence+Y-closed.pkl")
-    df_open.to_pickle("data/Coherence+Y-open.pkl")
+    df_closed.to_pickle("data/Coherence+Y-CLOSED.pkl")
+    df_open.to_pickle("data/Coherence+Y-OPEN.pkl")
+    return (df_closed,df_open)
 
 # Merge_Coherence_Y()
+
+def COH_Feature_Y_Dims():
+    """Returns a dataframe "features" which has the dimensions of the overlap between Coherence Maps, Features and Y"""
+    coherence_dims = pd.read_pickle("data/Coherence+Y-CLOSED.pkl")
+    coherence_dims.set_index(df.index, inplace=True)
+    coherence_dims = pd.concat([coherence_dims,df], axis=1)
+    features = pd.read_pickle("data/clean_features.pkl")
+    coherence_dims = coherence_dims.drop(coherence_dims.index[~coherence_dims.index.isin(features.index)])
+    features = features.drop(features.index[~features.index.isin(coherence_dims.index)])
+    return features
+
+# print(COH_Feature_Y_Dims())
+
+
+
+def Merge_Coherence_Feats_Y():
+    """"This function merges the coherence maps with the features and response vars"""
+    df_closed, df_open = Merge_Coherence_Y()
+    df_closed_responseVars = df_closed.iloc[:, -6:]
+    df_open_responseVars = df_open.iloc[:, -6:]
+    features = COH_Feature_Y_Dims()
+    df_closed = df_closed.drop(df_closed.index[~df_closed.index.isin(features.index)])
+    df_open = df_open.drop(df_open.index[~df_open.index.isin(features.index)])
+    df_closed_responseVars = df_closed_responseVars.drop(df_closed_responseVars.index[~df_closed_responseVars.index.isin(features.index)])
+    df_open_responseVars = df_open_responseVars.drop(df_open_responseVars.index[~df_open_responseVars.index.isin(features.index)])
+    coh_only_closed = df_closed.iloc[:, :-6]
+    coh_only_open = df_open.iloc[:, :-6]
+    features.set_index(coh_only_open.index, inplace=True)
+    data_merge_closed = pd.concat([coh_only_closed,features,df_closed_responseVars], axis=1)
+    data_merge_open = pd.concat([coh_only_open,features,df_open_responseVars], axis=1)
+    data_merge_closed.to_pickle("data/Coherence+Features+Y-CLOSED.pkl")
+    data_merge_open.to_pickle("data/Coherence+Features+Y-OPEN.pkl")
+    return (data_merge_closed.shape,data_merge_open.shape)
+
+print(Merge_Coherence_Feats_Y())

@@ -7,135 +7,108 @@ import pickle
 import time
 import numpy as np
 
+Features_Y = pd.read_pickle("data/Features+Y.pkl")
+COHERENCE_Y_CLOSED = pd.read_pickle("data/Coherence+Y-CLOSED.pkl")
+COHERENCE_Y_OPEN = pd.read_pickle("data/Coherence+Y-OPEN.pkl")
+COHERENCE_FEATS_Y_CLOSED = pd.read_pickle("data/Coherence+Features+Y-CLOSED.pkl")
+COHERENCE_FEATS_Y_OPEN = pd.read_pickle("data/Coherence+Features+Y-OPEN.pkl")
 
-start = time.time()
-# Load Coherence+Y-CLOSED.pkl
-coherence_closed = pd.read_pickle("data/Coherence+Y-closed.pkl")
-coherence_open = pd.read_pickle("data/Coherence+Y-open.pkl")
+closed_eyes_ridge = {
+    "COHERENCE+Y": COHERENCE_Y_CLOSED,
+    "COHERENCE+Features+Y": COHERENCE_FEATS_Y_CLOSED,
+    "Features+Y": Features_Y}
+open_eyes_ridge = {
+    "COHERENCE+Y": COHERENCE_Y_OPEN,
+    "COHERENCE+Features+Y": COHERENCE_FEATS_Y_OPEN,
+    "Features+Y": Features_Y}
 
-# # remove 90 percent of the rows
-# coherence_closed = coherence_closed.sample(frac=0.1, random_state=42)
-# coherence_open = coherence_open.sample(frac=0.1, random_state=42)
+def RidgeReg(key,data):
+    """This function takes a dataframe and computes ridge regression.
+    It uses the last 6 columns seperately as targets, and then the last 6 columns together as a target.
+    The score of each model is stored in a dictionary."""
+    # Create dictionary to store scores
+    scores = {}
+    relative_error = {}
+    # Split data into features and target
+    X = data.iloc[:, :-6]
+    y = data.iloc[:, -6:]
 
-# convert dataframes to numpy arrays
-coherence_closed = coherence_closed.to_numpy()
-coherence_open = coherence_open.to_numpy()
+    # Get R-squared and relative error for each target
+    for col in y:
+        y1 = y[col]
+        # Split into train and test
+        X_train, X_test, y_train, y_test = train_test_split(X, y1, test_size=0.15, random_state=42)
 
-# Split data into train and test. Last 4 columns are the response variables
-X_train_closed, X_test_closed, y_train_closed, y_test_closed = train_test_split(
-    coherence_closed[:, :-4], coherence_closed[:, -4:], test_size=0.2, random_state=42)
-X_train_open, X_test_open, y_train_open, y_test_open = train_test_split(
-    coherence_open[:, :-4], coherence_open[:, -4:], test_size=0.2, random_state=42)
-# Run Ridge Regression on the train data
-ridge_closed = Ridge(alpha=0.1)
-ridge_closed.fit(X_train_closed, y_train_closed)
-ridge_open = Ridge(alpha=0.1)
-ridge_open.fit(X_train_open, y_train_open)
-# score the model
-coh_y_closed_score = ridge_closed.score(X_test_closed, y_test_closed)
-coh_y_open_score = ridge_open.score(X_test_open, y_test_open)
-print("Score for closed eyes:", coh_y_closed_score)
-print("Score for open eyes:", coh_y_open_score)
-
-# Split data into train and test. Use last column as target variable, remove the other response variables
-X_train_closed, X_test_closed, y_train_closed, y_test_closed = train_test_split(
-    coherence_closed[:, :-4], coherence_closed[:, -1:], test_size=0.2, random_state=42)
-X_train_open, X_test_open, y_train_open, y_test_open = train_test_split(
-    coherence_open[:, :-4], coherence_open[:, -1:], test_size=0.2, random_state=42)
-# Run Ridge Regression on the train data
-ridge_closed = Ridge(alpha=0.1)
-ridge_closed.fit(X_train_closed, y_train_closed)
-ridge_open = Ridge(alpha=0.1)
-ridge_open.fit(X_train_open, y_train_open)
-# score the model
-coh_trailB_closed_score = ridge_closed.score(X_test_closed, y_test_closed)
-coh_trailB_open_score = ridge_open.score(X_test_open, y_test_open)
-print("Score for closed eyes:", coh_trailB_closed_score)
-print("Score for open eyes:", coh_trailB_open_score)
-
-# Split data into train and test. Use second last column as target variable, remove the other response variables
-X_train_closed, X_test_closed, y_train_closed, y_test_closed = train_test_split(
-    coherence_closed[:, :-4], coherence_closed[:, -2:-1], test_size=0.2, random_state=42)
-X_train_open, X_test_open, y_train_open, y_test_open = train_test_split(
-    coherence_open[:, :-4], coherence_open[:, -2:-1], test_size=0.2, random_state=42)
-# Run Ridge Regression on the train data
-ridge_closed = Ridge(alpha=0.1)
-ridge_closed.fit(X_train_closed, y_train_closed)
-ridge_open = Ridge(alpha=0.1)
-ridge_open.fit(X_train_open, y_train_open)
-# score the model
-coh_trailA_closed_score = ridge_closed.score(X_test_closed, y_test_closed)
-coh_trailA_open_score = ridge_open.score(X_test_open, y_test_open)
-
-# Split data into train and test. Use third last column as target variable, remove the other response variables
-X_train_closed, X_test_closed, y_train_closed, y_test_closed = train_test_split(
-    coherence_closed[:, :-4], coherence_closed[:, -3:-2], test_size=0.2, random_state=42)
-X_train_open, X_test_open, y_train_open, y_test_open = train_test_split(
-    coherence_open[:, :-4], coherence_open[:, -3:-2], test_size=0.2, random_state=42)
-# Run Ridge Regression on the train data
-ridge_closed = Ridge(alpha=0.1)
-ridge_closed.fit(X_train_closed, y_train_closed)
-ridge_open = Ridge(alpha=0.1)
-ridge_open.fit(X_train_open, y_train_open)
-# score the model
-coh_ACE_closed_score = ridge_closed.score(X_test_closed, y_test_closed)
-coh_ACE_open_score = ridge_open.score(X_test_open, y_test_open)
-print("Score for closed eyes:", coh_ACE_closed_score)
-print("Score for open eyes:", coh_ACE_open_score)
-
-# Split data into train and test. Use fourth last column as target variable, remove the other response variables
-X_train_closed, X_test_closed, y_train_closed, y_test_closed = train_test_split(
-    coherence_closed[:, :-4], coherence_closed[:, -4:-3], test_size=0.2, random_state=42)
-X_train_open, X_test_open, y_train_open, y_test_open = train_test_split(
-    coherence_open[:, :-4], coherence_open[:, -4:-3], test_size=0.2, random_state=42)
-# Run Ridge Regression on the train data
-ridge_closed = Ridge(alpha=0.1)
-ridge_closed.fit(X_train_closed, y_train_closed)
-ridge_open = Ridge(alpha=0.1)
-ridge_open.fit(X_train_open, y_train_open)
-# score the model
-coh_MMSE_closed_score = ridge_closed.score(X_test_closed, y_test_closed)
-coh_MMSE_open_score = ridge_open.score(X_test_open, y_test_open)
-print("Score for closed eyes:", coh_MMSE_closed_score)
-print("Score for open eyes:", coh_MMSE_open_score)
-
-# Create a dataframe with the scores
-coh_scores = pd.DataFrame(
-    {'coh_y_closed_score': [coh_y_closed_score], 'coh_y_open_score': [coh_y_open_score],
-        'coh_trailB_closed_score': [coh_trailB_closed_score], 'coh_trailB_open_score': [coh_trailB_open_score],
-        'coh_trailA_closed_score': [coh_trailA_closed_score], 'coh_trailA_open_score': [coh_trailA_open_score],
-        'coh_ACE_closed_score': [coh_ACE_closed_score], 'coh_ACE_open_score': [coh_ACE_open_score],
-        'coh_MMSE_closed_score': [coh_MMSE_closed_score], 'coh_MMSE_open_score': [coh_MMSE_open_score]})
-coh_scores.index = ['R-Squared Score']
-print(coh_scores)
-# Save the dataframe to a csv file
-coh_scores.to_csv('data/coh_scores.csv')
-end = time.time()
-print("Time:", end - start)
+        # loop through different values of alpha and find the best one and use it
+        best_score = 0
+        best_alpha = 0
+        for alpha in [0.001, 0.01, 0.1, 1, 10, 100]:
+            model = Ridge(alpha=alpha)
+            model.fit(X_train, y_train)
+            score = model.score(X_test, y_test)
+            if score > best_score:
+                best_score = score
+                best_alpha = alpha
+        model = Ridge(alpha=best_alpha)
+        model.fit(X_train, y_train)
+        scores[col] = model.score(X_test, y_test)
+        # # Compute relative error for X_test and y_test. Add small epsilon value to avoid division by zero
+        relative_error[col] = np.mean(np.abs(y_test - model.predict(X_test)) / (y_test + 1e-10))
 
 
-# X_train, X_test, y_train, y_test = train_test_split(df_closed, df, test_size=0.2, random_state=42)
-# scaler = StandardScaler()
-# X_train = scaler.fit_transform(X_train)
-# X_test = scaler.transform(X_test)
-# # Find the best alpha value. Store in variable best_alpha
-# best_alpha = 0
-# best_score = 0
-# for alpha in [0.001, 0.01, 0.1, 1, 10, 100]:
-#     # print progress
-#     print('alpha:', alpha)
-#     reg = Ridge(alpha=alpha)
-#     reg.fit(X_train, y_train)
-#     score = reg.score(X_test, y_test)
-#     if score > best_score:
-#         best_alpha = alpha
-#         best_score = score
-# # Print the best alpha value
-# print('Best alpha value:', best_alpha)
-# # Fit the model with best_alpha
-# reg = Ridge(alpha=best_alpha)
-# reg.fit(X_train, y_train)
-# # print the score
-# print(reg.score(X_test, y_test))
+    # Get R-squared (all response vars)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42)
+    best_score = 0
+    best_alpha = 0
+    # loop through different values of alpha and find the best one and use it
+    for alpha in [0.001, 0.01, 0.1, 1, 10, 100]:
+        model = Ridge(alpha=alpha)
+        model.fit(X_train, y_train)
+        score = model.score(X_test, y_test)
+        if score > best_score:
+            best_score = score
+            best_alpha = alpha
+    model = Ridge(alpha=best_alpha)
+    model.fit(X_train, y_train)
+    scores["Y"] = model.score(X_test, y_test)
+    # Compute relative error for X_test and y_test
+    y_pred = model.predict(X_test)
+    # compute relative error between the matrix y_pred and the matrix y_test
+    relative_error["Y"] = np.mean(np.mean(np.abs((y_pred-y_test))/(y_test+1e-10), axis=0))
+
+    # convert scores to dataframe
+    scores = pd.DataFrame(scores, index=[f"{key}"]).T
+    # convert relative error to dataframe
+    # relative_error = pd.DataFrame(relative_error, index=[f"Relative Error ({key})"]).T
+    # # append relative error to scores
+    # scores = pd.concat([scores, relative_error], axis=1)
+    return scores
+
+#loop through all_data and call RidgeReg function. Stack each dataframe column wise using the same index
+#and store the result in a new dataframe
+ridge_scores_closed = pd.DataFrame()
+for key, data in closed_eyes_ridge.items():
+    scores = RidgeReg(key,data)
+    ridge_scores_closed = pd.concat([ridge_scores_closed, scores], axis=1)
+# rename the columns to "Coherence", "Coherence + Health" and "Health"
+ridge_scores_closed.columns = ["Coherence", "Coherence + Health", "Health"]
+# rename the last index of the dataframe to "All Response Variables"
+ridge_scores_closed.rename(index={"Y":"All Response Vars"}, inplace=True)
 
 
+ridge_scores_open = pd.DataFrame()
+for key, data in open_eyes_ridge.items():
+    scores = RidgeReg(key,data)
+    ridge_scores_open = pd.concat([ridge_scores_open, scores], axis=1)
+# rename the columns to "Coherence", "Coherence + Health" and "Health"
+ridge_scores_open.columns = ["Coherence", "Coherence + Health", "Health"]
+# rename the last index of the dataframe to "All Response Vars"
+ridge_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
+
+# print the dataframes to latex
+print(ridge_scores_closed.to_latex(index=False))
+print(ridge_scores_open.to_latex(index=False))
+
+# save the dataframes to pickle files
+ridge_scores_closed.to_pickle("data/Ridge_scores-closed.pkl")
+ridge_scores_open.to_pickle("data/Ridge_scores-open.pkl")

@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
-plotting = True
+plotting = False
 
 print("Loading data...")
 # Load the processed data for eyes closed and eyes open
@@ -64,6 +64,12 @@ df_open = pd.DataFrame.from_dict(coherence_maps_open, orient='index')
 df_closed.dropna(inplace=True)
 df_open.dropna(inplace=True)
 
+valid_ids = list(df_closed.index)
+# pickle valid_ids
+with open('data/valid_ids.pkl', 'wb') as f:
+    pickle.dump(valid_ids, f)
+
+
 # Delete all rows in df_closed and df_open that dont have the same index as df
 # This ensures we have the same number of rows in both dataframes.
 df_closed = df_closed.drop(df_closed.index[~df_closed.index.isin(response_var_df.index)])
@@ -89,11 +95,13 @@ pca_open.fit(df_open)
 print("Shape of PCA components for eyes closed:", pca_closed.components_.shape)
 print("Shape of PCA components for eyes open:", pca_open.components_.shape)
 
-# # # Transform the data
-# print("Transforming data for closed eyes...")
-# df_closed_pca = pca_closed.transform(df_closed)
-# print("Transforming data for open eyes...")
-# df_open_pca = pca_open.transform(df_open)
+# # Transform the data
+print("Transforming data for closed eyes...")
+df_closed_pca = pca_closed.transform(df_closed)
+print("Transforming data for open eyes...")
+df_open_pca = pca_open.transform(df_open)
+
+print(df_closed.head().T)
 
 print("Pickling PCA models...")
 # Pickle the PCA model

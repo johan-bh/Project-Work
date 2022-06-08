@@ -1,10 +1,11 @@
 import pandas as pd
 import os
 import numpy as np
+import pickle
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 pd.options.mode.chained_assignment = None
-pd.set_option('display.max_columns', 500)
+# pd.set_option('display.max_columns', 500)
 file_path = r"C:\Users\jbhan\Desktop\data_kognition_inflammation.xlsx"
 file_path2 = r"C:\Users\jbhan\Desktop\Data_Søvn og Depression_D-vit.xlsx"
 file_path3 = r"C:\Users\jbhan\Desktop\neurotest.xlsx"
@@ -104,9 +105,12 @@ def clean_file1():
     # replace all nan values with most frequent value in df["familiedepression"]
     df["familiedepression"] = df["familiedepression"].fillna(df["familiedepression"].mode()[0])
 
-    valid_ids = pd.read_csv("data/valid_ids.csv", index_col=0)
-    # convert first column to list
-    valid_ids = valid_ids.iloc[:,0].tolist()
+    # remove decimal point from the indexes of df
+    df.index = df.index.map(lambda x: str(x).replace(".0", ""))
+    valid_ids = pd.read_pickle("data/valid_ids.pkl")
+    df.index = df.index.astype(str)
+
+    df = df.drop(df.index[~df.index.isin(valid_ids)])
     # Delete all rows that are not in valid_ids
     df = df.drop(df.index[~df.index.isin(valid_ids)])
     return df
@@ -135,9 +139,9 @@ def clean_file2():
     # drop the columns Methylmalonat, CRP, 25-OH-Vitamin D, 25-OH-Vitamin D ny metode nov 2017, HBA1C_DCCT (not enough data)
     df2.drop(["Methylmalonat", "CRP", "25-OH-Vitamin D", "25-OH-Vitamin D ny metode nov 2017", "HBA1C_DCCT"], axis=1, inplace=True)
 
-    valid_ids = pd.read_csv("data/valid_ids.csv", index_col=0)
-    # convert first column to list
-    valid_ids = valid_ids.iloc[:,0].tolist()
+    valid_ids = pd.read_pickle("data/valid_ids.pkl")
+    # Drop all rows that are not in valid_ids. Set index type of df to string
+    df2.index = df2.index.astype(str)
     # Delete all rows that are not in valid_ids
     df2 = df2.drop(df2.index[~df2.index.isin(valid_ids)])
     return df2
@@ -154,7 +158,7 @@ def merge_features():
     features = pd.concat([df, df2], axis=1)
     # # save df to pickle file data/clean_features.pkl
     df.to_pickle("data/clean_features.pkl")
-    return features.head()
+    return features
 
 def get_response_vars():
     # Read second tab of excel file
@@ -166,18 +170,16 @@ def get_response_vars():
 
     # Remove entries with missing values (NaN)
     df = df.dropna()
-
-    # load valid_ids.csv from data folder and set first column as index
-    valid_ids = pd.read_csv("data/valid_ids.csv", index_col=0)
-    # convert first column to list
-    valid_ids = valid_ids.iloc[:,0].tolist()
-    # Delete all rows that are not in valid_ids
+    # load "data/valid_ids.pkl" and convert to pandas series
+    valid_ids = pd.read_pickle("data/valid_ids.pkl")
+    # Drop all rows that are not in valid_ids. Set index type of df to string
+    df.index = df.index.astype(str)
     df = df.drop(df.index[~df.index.isin(valid_ids)])
-    # # Save to pickle file
+    # Save to pickle file
     df.to_pickle("data/response_var_df.pkl")
-    return df
+    return df.head(),df.shape
 
-# clean_file1()
-# clean_file2()
+# print(clean_file1())
+# print(clean_file2())
 # print(merge_features())
-# print(get_response_vars())
+print(get_response_vars())
