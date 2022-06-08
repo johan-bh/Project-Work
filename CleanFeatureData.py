@@ -7,12 +7,10 @@ pd.options.mode.chained_assignment = None
 pd.set_option('display.max_columns', 500)
 file_path = r"C:\Users\jbhan\Desktop\data_kognition_inflammation.xlsx"
 file_path2 = r"C:\Users\jbhan\Desktop\Data_Søvn og Depression_D-vit.xlsx"
-data1 = True
-data2 = True
-# set max_rows to None pandas dataframe will read all rows
+file_path3 = r"C:\Users\jbhan\Desktop\neurotest.xlsx"
 
 
-if data1 == True:
+def clean_file1():
     # read excel file
     df = pd.read_excel(file_path)
     # set CSMK as index
@@ -111,8 +109,9 @@ if data1 == True:
     valid_ids = valid_ids.iloc[:,0].tolist()
     # Delete all rows that are not in valid_ids
     df = df.drop(df.index[~df.index.isin(valid_ids)])
+    return df
 
-if data2 == True:
+def clean_file2():
     # read file_path2
     df_init = pd.read_excel(file_path2)
     df_init.set_index('CSMK', inplace=True)
@@ -141,13 +140,44 @@ if data2 == True:
     valid_ids = valid_ids.iloc[:,0].tolist()
     # Delete all rows that are not in valid_ids
     df2 = df2.drop(df2.index[~df2.index.isin(valid_ids)])
+    return df2
 
+def merge_features():
+    # drop the rows of df that dont have index in df2
+    df = clean_file1()
+    df2 = clean_file2()
 
-# drop the rows of df that dont have index in df2
-df = df.drop(df.index[~df.index.isin(df2.index)])
-# drop the rows of df2 that dont have index in df
-df2 = df2.drop(df2.index[~df2.index.isin(df.index)])
-# merge df and df2
-features = pd.concat([df, df2], axis=1)
-# # save df to pickle file data/clean_features.pkl
-df.to_pickle("data/clean_features.pkl")
+    df = df.drop(df.index[~df.index.isin(df2.index)])
+    # drop the rows of df2 that dont have index in df
+    df2 = df2.drop(df2.index[~df2.index.isin(df.index)])
+    # merge df and df2
+    features = pd.concat([df, df2], axis=1)
+    # # save df to pickle file data/clean_features.pkl
+    df.to_pickle("data/clean_features.pkl")
+    return features.head()
+
+def get_response_vars():
+    # Read second tab of excel file
+    df = pd.read_excel(file_path3,sheet_name="CESA II")
+    # set cmsk column as index
+    df.set_index('cmsk', inplace=True)
+    # Only include columns MMSE, ACE and TrailMakingA and TrailMakingB. Keep index as is
+    df = df[['MMSE', 'ACE', 'TrailMakingA', 'TrailMakingB',"DigitSymbol","Retention"]]
+
+    # Remove entries with missing values (NaN)
+    df = df.dropna()
+
+    # load valid_ids.csv from data folder and set first column as index
+    valid_ids = pd.read_csv("data/valid_ids.csv", index_col=0)
+    # convert first column to list
+    valid_ids = valid_ids.iloc[:,0].tolist()
+    # Delete all rows that are not in valid_ids
+    df = df.drop(df.index[~df.index.isin(valid_ids)])
+    # # Save to pickle file
+    df.to_pickle("data/response_var_df.pkl")
+    return df
+
+# clean_file1()
+# clean_file2()
+# print(merge_features())
+# print(get_response_vars())

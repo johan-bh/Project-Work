@@ -2,31 +2,9 @@ import pandas as pd
 import pickle
 import time
 
-# # <==== Merge: PCA + Response Vars =====>
-# # Read second tab of excel file
-# df = pd.read_excel(file_path,sheet_name="CESA II")
-# # set cmsk column as index
-# df.set_index('cmsk', inplace=True)
-# # Only include columns MMSE, ACE and TrailMakingA and TrailMakingB. Keep index as is
-# df = df[['MMSE', 'ACE', 'TrailMakingA', 'TrailMakingB']]
-# # Remove entries with missing values (NaN)
-# df = df.dropna()
-#
-# # load valid_ids.csv from data folder and set first column as index
-# valid_ids = pd.read_csv("data/valid_ids.csv", index_col=0)
-# # convert first column to list
-# valid_ids = valid_ids.iloc[:,0].tolist()
-# # Delete all rows that are not in valid_ids
-# df = df.drop(df.index[~df.index.isin(valid_ids)])
-# # Save to pickle file
-# df.to_pickle("data/response_var_df.pkl")
 
 df = pd.read_pickle('data/response_var_df.pkl')
 
-# read csv file (data/coh_scores.csv)
-coh_scores = pd.read_csv("data/coh_scores.csv")
-print(coh_scores.T)
-# print(df.iloc[:, -2:-1])
 
 # <==== Merge: PCA + Response Vars =====>
 
@@ -117,8 +95,6 @@ def Merge_Features_Y():
 
 
 
-
-# create function to merge coherence maps with response vars
 def Merge_Coherence_Y():
     """
     Merge coherence maps with response vars

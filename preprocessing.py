@@ -45,11 +45,10 @@ def preprocessing(file_path):
     # raw_data = raw_data.notch_filter(np.arange(50,251,50), fir_design='firwin')
 
     # Downsample frequency to 250Hz
-    raw_data.resample(250, npad="auto", n_jobs=n_jobs,verbose=None)
+    processed_data = raw_data.resample(250, npad="auto", n_jobs=n_jobs,verbose=None)
 
     # Remove "slow drifts" before running ICA
-    filt_raw = raw_data.copy().filter(l_freq=1., h_freq=None,n_jobs=n_jobs,verbose=None)
-
+    # filt_raw = raw_data.copy().filter(l_freq=1., h_freq=None,n_jobs=n_jobs,verbose=None)
     # # Instantiate ICA model with 50 components to get most of the variance
     # ica = ICA(n_components=15, max_iter="auto", random_state=97)
     # # Fit ICA model and reconstruct data
@@ -58,8 +57,6 @@ def preprocessing(file_path):
     # reconst_raw = raw_data.copy()
     # ica.apply(reconst_raw)
     # processed_data = reconst_raw
-
-    processed_data = filt_raw
 
     # Split filtered data into eyes closed and eyes open
     open_eyes = processed_data.copy().crop(tmin=0,tmax=60)
@@ -73,9 +70,9 @@ def preprocessing(file_path):
         # Extract data & time vector from processed data
         data, times = processed_data[:, :]
         # convert to cupy array for faster computation
-        data = cp.asarray(data)
+        data = np.asarray(data)
         # Instantiate TimeSeries object on cupy array
-        T = TimeSeries(data.get(), sampling_rate=250)
+        T = TimeSeries(data, sampling_rate=250)
         ch_names = raw_data.ch_names[:-5]
 
         # Dict for the 7 frequency bands as a cupy array
@@ -91,14 +88,14 @@ def preprocessing(file_path):
         C = CoherenceAnalyzer(T)
 
         # Generate coherence matrix for each frequency band and then ravel+concatenate them into a single array
-        coherence_maps = cp.array([])
+        coherence_maps = np.array([])
         for key,value in frequency_bands.items():
             # Extract frequency indices on CoherenceAnalyzer object
             freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
-            coherence_map = cp.mean(C.coherence[:, :, freq_idx], -1)
-            coherence_map = cp.array(coherence_map[np.triu_indices(len(ch_names), k=1)])
+            coherence_map = np.mean(C.coherence[:, :, freq_idx], -1)
+            coherence_map = np.array(coherence_map[np.triu_indices(len(ch_names), k=1)])
             # Concatenate coherence maps as cupy array
-            coherence_maps = cp.concatenate((coherence_maps, coherence_map.ravel()))
+            coherence_maps = np.concatenate((coherence_maps, coherence_map.ravel()))
         # Add coherence maps to list
         coh_list.append(coherence_maps)
     return coh_list
