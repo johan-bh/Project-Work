@@ -92,9 +92,10 @@ pca_scores_open.columns = ["PCA", "PCA + Health", "Health"]
 # rename the last index of the dataframe to "All Response Vars"
 pca_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
 
+
 # print the dataframes to latex
-print(pca_scores_closed.to_latex(index=False))
-print(pca_scores_open.to_latex(index=False))
+print(pca_scores_closed.to_latex(index=True))
+print(pca_scores_open.to_latex(index=True))
 
 # save the dataframes to pickle files
 pca_scores_closed.to_pickle("data/PCR_scores-closed.pkl")

@@ -106,8 +106,8 @@ ridge_scores_open.columns = ["Coherence", "Coherence + Health", "Health"]
 ridge_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
 
 # print the dataframes to latex
-print(ridge_scores_closed.to_latex(index=False))
-print(ridge_scores_open.to_latex(index=False))
+print(ridge_scores_closed.to_latex(index=True))
+print(ridge_scores_open.to_latex(index=True))
 
 # save the dataframes to pickle files
 ridge_scores_closed.to_pickle("data/Ridge_scores-closed.pkl")
