@@ -6,12 +6,6 @@ import torch
 from torch import nn
 import numpy as np
 
-import matplotlib.pyplot as plt
-from tensorly.base import tensor_to_vec, partial_tensor_to_vec
-from tensorly.datasets.synthetic import gen_image
-from tensorly.regression.cp_regression import CPRegressor
-import tensorly as tl
-
 # Use tensor regression to reduce size of 3D matrix of size 64x64x7 to single value 64 + 7 = 71
 
 data = pd.read_pickle("data/tensor_data_open.pkl")

@@ -7,10 +7,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mne
 import pickle
-import cupy as cp
 import os
 
 activate_plots = False
+ridge_regression = True
 mne.utils.set_config('MNE_USE_CUDA', 'true')  # Use GPU for ICA etc.
 # Check if GPU is available. n_jobs = 1 (CPU) n_jobs = "cuda" (GPU). n_jobs is a param for filter functions etc.
 if mne.utils.get_config('MNE_USE_CUDA') == 'true':
@@ -31,6 +31,9 @@ def preprocessing(file_path):
     # Load data
     raw_data = curry.read_raw_curry(file_path, preload=True, verbose=None)
 
+    # only include the first 64 channels
+    raw_data.pick_channels(raw_data.ch_names[:64])
+
     # Filter data
     # Crop data: 60 seconds of open eyes + 60 seconds of closed eyes + 10 seconds for good measure :)
     raw_data.crop(tmax=130)
@@ -45,11 +48,10 @@ def preprocessing(file_path):
     # raw_data = raw_data.notch_filter(np.arange(50,251,50), fir_design='firwin')
 
     # Downsample frequency to 250Hz
-    raw_data.resample(250, npad="auto", n_jobs=n_jobs,verbose=None)
+    processed_data = raw_data.resample(250, npad="auto", n_jobs=n_jobs,verbose=None)
 
     # Remove "slow drifts" before running ICA
-    filt_raw = raw_data.copy().filter(l_freq=1., h_freq=None,n_jobs=n_jobs,verbose=None)
-
+    # filt_raw = raw_data.copy().filter(l_freq=1., h_freq=None,n_jobs=n_jobs,verbose=None)
     # # Instantiate ICA model with 50 components to get most of the variance
     # ica = ICA(n_components=15, max_iter="auto", random_state=97)
     # # Fit ICA model and reconstruct data
@@ -58,8 +60,6 @@ def preprocessing(file_path):
     # reconst_raw = raw_data.copy()
     # ica.apply(reconst_raw)
     # processed_data = reconst_raw
-
-    processed_data = filt_raw
 
     # Split filtered data into eyes closed and eyes open
     open_eyes = processed_data.copy().crop(tmin=0,tmax=60)
@@ -73,10 +73,10 @@ def preprocessing(file_path):
         # Extract data & time vector from processed data
         data, times = processed_data[:, :]
         # convert to cupy array for faster computation
-        data = cp.asarray(data)
+        data = np.asarray(data)
         # Instantiate TimeSeries object on cupy array
-        T = TimeSeries(data.get(), sampling_rate=250)
-        ch_names = raw_data.ch_names[:-5]
+        T = TimeSeries(data, sampling_rate=250)
+        # ch_names = raw_data2.ch_names[:-5]
 
         # Dict for the 7 frequency bands as a cupy array
         frequency_bands = {"delta": np.array([1,3.99]),
@@ -91,16 +91,32 @@ def preprocessing(file_path):
         C = CoherenceAnalyzer(T)
 
         # Generate coherence matrix for each frequency band and then ravel+concatenate them into a single array
-        coherence_maps = cp.array([])
-        for key,value in frequency_bands.items():
-            # Extract frequency indices on CoherenceAnalyzer object
-            freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
-            coherence_map = cp.mean(C.coherence[:, :, freq_idx], -1)
-            coherence_map = cp.array(coherence_map[np.triu_indices(len(ch_names), k=1)])
-            # Concatenate coherence maps as cupy array
-            coherence_maps = cp.concatenate((coherence_maps, coherence_map.ravel()))
-        # Add coherence maps to list
-        coh_list.append(coherence_maps)
+        if ridge_regression == True:
+            # create empty matrix for coherence
+            coherence_maps = np.array([])
+            for key, value in frequency_bands.items():
+                # Extract frequency indices on CoherenceAnalyzer object
+                freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
+                coherence_map = np.mean(C.coherence[:, :, freq_idx], -1)
+                # append each 2d array to coherence_maps
+                coherence_maps = np.append(coherence_maps, coherence_map)
+            # reshape coherence_maps to 3d array
+            try:
+                coherence_maps = np.reshape(coherence_maps, (64, 64, 7))
+                coh_list.append(coherence_maps)
+            except:
+                coh_list = None
+        else:
+            coherence_maps = np.array([])
+            for key,value in frequency_bands.items():
+                # Extract frequency indices on CoherenceAnalyzer object
+                freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
+                coherence_map = np.mean(C.coherence[:, :, freq_idx], -1)
+                coherence_map = np.array(coherence_map[np.triu_indices(64, k=1)])
+                # Concatenate coherence maps as cupy array
+                coherence_maps = np.concatenate((coherence_maps, coherence_map.ravel()))
+            # Add coherence maps to list
+            coh_list.append(coherence_maps)
     return coh_list
 
 folder_path1  = "C:\\Users\\jbhan\\Desktop\\AA_CESA-2-DATA-EEG-Resting (Anden del)\\"
@@ -116,6 +132,10 @@ if "S195_11851_R001.dat" in file_names1:
     file_names1.remove("S195_11851_R001.dat")
 if "S309_11498_R001.dat" in file_names1:
     file_names1.remove("S309_11498_R001.dat")
+if "S310_16627_R001.dat" in file_names1:
+    file_names1.remove("S310_16627_R001.dat")
+if "S311_11302_R001.dat" in file_names1:
+    file_names1.remove("S311_11302_R001.dat")
 
 # Get id that is written between underscores (starts with underscore and ends with underscore)
 id_list1 = [f.split('_')[1].split('.')[0] for f in file_names1]
@@ -131,7 +151,6 @@ file_names = [f.replace('\\','/') for f in file_names]
 # Add to dictionary with id as key and file name as value
 id_dict = dict(zip(id_list1 + id_list2, file_names))
 
-
 # Create a dictionary with id as key and coherence map as value
 coherence_maps = {}
 counter = 0
@@ -139,18 +158,30 @@ for id,file_name in id_dict.items():
     # Create counter that counts how many files have been processed
     print(f"{file_name}" + " is being processed...")
     print("Current progress: " + str(int(counter+1)) + "/" + str(len(id_dict)))
-    coherence_maps[id] = preprocessing(file_name)
-    counter += 1
+    result = preprocessing(file_name)
+    if result == None:
+        print("Error in preprocessing")
+        continue
+    else:
+        coherence_maps[id] = result
+        counter += 1
+
 
 # Split coherence maps into two dicts. Use value index 0 for open eyes and value index 1 for closed eyes
 coherence_maps_open = {k: v[0] for k, v in coherence_maps.items()}
 coherence_maps_closed = {k: v[1] for k, v in coherence_maps.items()}
 
-# Save dictionaries as pickle files for later use
-with open('data/coherence_maps_open.pkl', 'wb') as f:
-    pickle.dump(coherence_maps_open, f)
-with open('data/coherence_maps_closed.pkl', 'wb') as f:
-    pickle.dump(coherence_maps_closed, f)
+if ridge_regression == True:
+    with open('data/tensor_data_open.pkl', 'wb') as f:
+        pickle.dump(coherence_maps_open, f)
+    with open('data/tensor_data_closed.pkl', 'wb') as f:
+        pickle.dump(coherence_maps_closed, f)
+else:
+    # Save dictionaries as pickle files for later use
+    with open('data/coherence_maps_open.pkl', 'wb') as f:
+        pickle.dump(coherence_maps_open, f)
+    with open('data/coherence_maps_closed.pkl', 'wb') as f:
+        pickle.dump(coherence_maps_closed, f)
 
 
 # Create a seperate file for plotting later
