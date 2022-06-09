@@ -104,7 +104,7 @@ def preprocessing(file_path):
     return coh_list
 
 folder_path1  = "C:\\Users\\jbhan\\Desktop\\AA_CESA-2-DATA-EEG-Resting (Anden del)\\"
-folder_path2 = "C:\\Users\\jbhan\\Desktop\\AA_CESA-2-DATA-EEG-Resting\\"
+folder_path2 =  "C:\\Users\\jbhan\\Desktop\\AA_CESA-2-DATA-EEG-Resting\\"
 
 # Create lists of filenames in each folder. Only use files that starts with "S" and ends with ".dat"
 file_names1 = [f for f in os.listdir(folder_path1) if f.endswith('.dat') and f.startswith('S')]

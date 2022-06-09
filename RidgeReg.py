@@ -3,8 +3,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 import pickle
-
-
 # Current not working. Very slow because of the large data set.
 
 # Load the processed (non PCA) data for eyes closed and eyes open

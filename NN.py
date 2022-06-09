@@ -24,7 +24,7 @@ def Load_data(pkl_file):
     A = pd.read_pickle(pkl_file)
     X_train, X_test, y_train, y_test = train_test_split(
        A.iloc[:, :-4], A.iloc[:, -4:], test_size=0.2, random_state=42)
-    return X_train, X_test, y_train, y_test 
+    return X_train, X_test, y_train, y_test
 
 class DataSet(torch.utils.data.Dataset):
   '''
