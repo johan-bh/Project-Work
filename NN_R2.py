@@ -12,7 +12,7 @@ import torch
 from sklearn import model_selection
 from trainNN import train_neural_net
 import pandas as pd
-
+from sklearn.preprocessing import StandardScaler
 
 # Load all data combinations
 PCA_Y_CLOSED = pd.read_pickle("data/PCA+Y-CLOSED.pkl") # (328, 56)
@@ -50,7 +50,7 @@ def NeuralNetwork(key,data):
     max_iter = 100000
     
     # K-fold crossvalidation
-    K = 5                 # only three folds to speed up this example
+    K = 5                # only three folds to speed up this example
     CV = model_selection.KFold(K, shuffle=True)
     
     # Define the model
@@ -70,10 +70,31 @@ def NeuralNetwork(key,data):
         #print('\nCrossvalidation fold: {0}/{1}'.format(k+1,K))    
         
         # Extract training and test set for current CV fold, convert to tensors
+        
+
+        
         X_train = torch.Tensor(X[train_index,:])
         y_train = torch.Tensor(y[train_index])
         X_test = torch.Tensor(X[test_index,:])
         y_test = torch.Tensor(y[test_index])
+        
+        
+        #standardization of response variables
+        y_train_mean = sum(y_train)/len(y_train)
+        y_train_std=y_train.std(axis=0)
+        y_train=(y_train-y_train_mean)/y_train_std
+       
+        y_test_mean = sum(y_test)/len(y_test)
+        y_test_std=y_test.std(axis=0)
+        y_test=(y_test-y_test_mean)/y_test_std
+    
+        """
+        #Standardization of inputs, so that ADAM learns faster
+        X_train_mean = sum(X_train)/len(X_train)
+        X_std=X_train.std(axis=0)
+        X_train=(X_train-X_train_mean)/X_std
+        X_test=(X_test-X_train_mean)/X_std
+        """
         
         # Train the net on training data
         net, final_loss, learning_curve = train_neural_net(model,
@@ -88,9 +109,9 @@ def NeuralNetwork(key,data):
         # Determine estimated class labels for test set
         y_test_est = net(X_test)
         # Determine the R-squared error
-        y_test_mean = sum(y_test)/len(y_test)
+        y_train_mean = sum(y_train)/len(y_train)
         enumerator=sum((y_test.float()-y_test_est.float())**2)
-        denumerator=sum((y_test.float()-y_test_mean.float())**2)
+        denumerator=sum((y_test.float()-y_train_mean.float())**2)
         r2=(1-(enumerator/denumerator)).data.numpy()
         errors.append(r2) # store error rate for current CV fold 
         
@@ -101,7 +122,8 @@ def NeuralNetwork(key,data):
     
     
     np_errors=np.array([errors[0],errors[1],errors[2],errors[3],errors[4]])
-
+    bestModelIndex=np.where(np_errors.mean(axis=1)==np.max(np_errors.mean(axis=1)))[0][0]
+    np_errors=np_errors[bestModelIndex,:]
         
     return np_errors
 
@@ -110,15 +132,13 @@ for key, data in closed_eyes_pca.items():
     errors = NeuralNetwork(key,data)
     print(key)
     print(round(np.mean(errors),3))
-    for i in range(6):
-        print(round(np.mean(errors[:,i]),2))
+    print(np.round(errors,3))
 
 for key, data in open_eyes_pca.items():
     errors = NeuralNetwork(key,data)
     print(key)
     print(round(np.mean(errors),3))
-    for i in range(6):
-        print(round(np.mean(errors[:,i]),2))
+    print(np.round(errors,3))
         
 """
 
