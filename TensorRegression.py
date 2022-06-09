@@ -25,9 +25,11 @@ output_shape = (71,)
 batch_size = 32
 x = data["12069"]
 
-# from tensorly.regression.cp_regression import CPRegressor
-# model = CPRegressor(input_shape, output_shape, batch_size)
+print(x)
 
+from tensorly.regression.cp_regression import CPRegressor
+model = CPRegressor(input_shape, output_shape, batch_size)
+print(data, )
 # from tensorly.regression.tucker_regression import TuckerRegressor
 # model = TuckerRegressor(input_shape, output_shape, batch_size)
 
