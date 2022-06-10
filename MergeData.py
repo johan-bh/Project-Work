@@ -62,9 +62,9 @@ def Merge_PCA_Y(eyes):
         data.to_pickle("data/ICA_PCA+Y-"+eyes.upper()+".pkl")
     return data
 
-# # Merge PCA with Y
-# for n in ["closed","open"]:
-#     Merge_PCA_Y(n)
+# Merge PCA with Y
+for n in ["closed","open"]:
+    Merge_PCA_Y(n)
 
 
 def Merge_PCA_Features_ResponseVar(eyes):
@@ -96,8 +96,8 @@ def Merge_PCA_Features_ResponseVar(eyes):
     return data_merge
 #
 # Merge PCA + Features + Response Vars
-# for n in ["closed","open"]:
-#     Merge_PCA_Features_ResponseVar(n)
+for n in ["closed","open"]:
+    Merge_PCA_Features_ResponseVar(n)
 
 
 def Merge_Features_Y():

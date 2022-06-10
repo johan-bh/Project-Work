@@ -14,17 +14,29 @@ from trainNN import train_neural_net
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-# Load all data combinations
-PCA_Y_CLOSED = pd.read_pickle("data/PCA+Y-CLOSED.pkl") # (328, 56)
-PCA_Y_OPEN = pd.read_pickle("data/PCA+Y-OPEN.pkl") # (328, 56)
-PCA_FEATS_Y_OPEN = pd.read_pickle("data/PCA+Features+Y-OPEN.pkl") # (265, 73)
-PCA_FEATS_Y_CLOSED = pd.read_pickle("data/PCA+Features+Y-CLOSED.pkl") # (265, 73)
-Features_Y = pd.read_pickle("data/Features+Y.pkl") # (265, 23)
+ica = True
 
+if ica == False:
+    # Load all data combinations
+    PCA_Y_CLOSED = pd.read_pickle("data/PCA+Y-CLOSED.pkl") # (328, 56)
+    PCA_Y_OPEN = pd.read_pickle("data/PCA+Y-OPEN.pkl") # (328, 56)
+    PCA_FEATS_Y_OPEN = pd.read_pickle("data/PCA+Features+Y-OPEN.pkl") # (265, 73)
+    PCA_FEATS_Y_CLOSED = pd.read_pickle("data/PCA+Features+Y-CLOSED.pkl") # (265, 73)
+    Features_Y = pd.read_pickle("data/Features+Y.pkl") # (265, 23)
+else:
+    # Load all data combinations
+    PCA_Y_CLOSED = pd.read_pickle("data/ICA_PCA+Y-CLOSED.pkl") # (318, 56)
+    PCA_Y_OPEN = pd.read_pickle("data/ICA_PCA+Y-OPEN.pkl") # (318, 56)
+    PCA_FEATS_Y_OPEN = pd.read_pickle("data/ICA_PCA+Features+Y-OPEN.pkl") # (256, 73)
+    PCA_FEATS_Y_CLOSED = pd.read_pickle("data/ICA_PCA+Features+Y-CLOSED.pkl") # (256, 73)
+    Features_Y = pd.read_pickle("data/Features+Y.pkl") # (265, 23)
+
+# We use ICA_COH+FEATS+Y as the dimensionality reduction matrix because it has the lowest amount of patients - we want all the other combs to have the same dims
+dim_regulator = pd.read_pickle("data/ICA_PCA+Features+Y-OPEN.pkl")
 # drop the indexes in PCA_Y_CLOSED, PCA_Y_OPEN and FEATURES_Y that are not in PCA_FEATS_Y_CLOSED
-PCA_Y_CLOSED = PCA_Y_CLOSED.drop(PCA_Y_CLOSED.index.difference(PCA_FEATS_Y_CLOSED.index))
-PCA_Y_OPEN = PCA_Y_OPEN.drop(PCA_Y_OPEN.index.difference(PCA_FEATS_Y_OPEN.index))
-Features_Y = Features_Y.drop(Features_Y.index.difference(PCA_FEATS_Y_CLOSED.index))
+PCA_Y_CLOSED = PCA_Y_CLOSED.drop(PCA_Y_CLOSED.index.difference(dim_regulator.index))
+PCA_Y_OPEN = PCA_Y_OPEN.drop(PCA_Y_OPEN.index.difference(dim_regulator.index))
+Features_Y = Features_Y.drop(Features_Y.index.difference(dim_regulator.index))
 
 open_eyes_pca = {
     "PCA+Y": PCA_Y_OPEN,
