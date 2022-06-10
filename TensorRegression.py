@@ -13,8 +13,10 @@ data = pd.read_pickle("data/tensor_data_open.pkl")
 # for key,value in data.items():
 #     print(key,value.shape)
 # turn each value into a tensor
+keys = list()
 for key,value in data.items():
     data[key] = torch.tensor(value)
+    keys.append(key)
 
 # # view shape of tensor
 # print(data["12069"].shape)
@@ -27,13 +29,15 @@ x = data["12069"]
 
 print(x)
 
-from tensorly.regression.cp_regression import CPRegressor
-model = CPRegressor(input_shape, output_shape, batch_size)
+from tensorly.decomposition import SymmetricCP
+model = SymmetricCP(input_shape, output_shape, batch_size)
 print(data, )
-# from tensorly.regression.tucker_regression import TuckerRegressor
-# model = TuckerRegressor(input_shape, output_shape, batch_size)
 
-# Hvad skal weight ranks være? Skal vi bruge CP Regression eller Tucker Regression?
+
+
+
+
+# Hvad skal weight ranks være?
 
 
 
