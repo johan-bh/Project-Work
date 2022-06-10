@@ -84,7 +84,7 @@ def train_neural_net(model, loss_fn, X, y,
     logging_frequency = 1000 # display the loss every 1000th iteration
     best_final_loss = 1e100
     for r in range(n_replicates):
-        print('\n\tReplicate: {}/{}'.format(r+1, n_replicates))
+        #print('\n\tReplicate: {}/{}'.format(r+1, n_replicates))
         # Make a new net (calling model() makes a new initialization of weights) 
         net = model()
         
@@ -106,7 +106,7 @@ def train_neural_net(model, loss_fn, X, y,
         optimizer = torch.optim.Adam(net.parameters())
         
         # Train the network while displaying and storing the loss
-        print('\t\t{}\t{}\t\t\t{}'.format('Iter', 'Loss','Rel. loss'))
+        #print('\t\t{}\t{}\t\t\t{}'.format('Iter', 'Loss','Rel. loss'))
         learning_curve = [] # setup storage for loss at each step
         old_loss = 1e6
         for i in range(max_iter):
@@ -122,17 +122,17 @@ def train_neural_net(model, loss_fn, X, y,
             old_loss = loss_value
             
             # display loss with some frequency:
-            if (i != 0) & ((i+1) % logging_frequency == 0):
-                print_str = '\t\t' + str(i+1) + '\t' + str(loss_value) + '\t' + str(p_delta_loss)
-                print(print_str)
+            #if (i != 0) & ((i+1) % logging_frequency == 0):
+                #print_str = '\t\t' + str(i+1) + '\t' + str(loss_value) + '\t' + str(p_delta_loss)
+                #print(print_str)
             # do backpropagation of loss and optimize weights 
             optimizer.zero_grad(); loss.backward(); optimizer.step()
             
             
         # display final loss
-        print('\t\tFinal loss:')
-        print_str = '\t\t' + str(i+1) + '\t' + str(loss_value) + '\t' + str(p_delta_loss)
-        print(print_str)
+        #print('\t\tFinal loss:')
+        #print_str = '\t\t' + str(i+1) + '\t' + str(loss_value) + '\t' + str(p_delta_loss)
+        #print(print_str)
         
         if loss_value < best_final_loss: 
             best_net = net
