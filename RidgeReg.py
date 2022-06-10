@@ -6,12 +6,33 @@ import pickle
 # import timer for timing the code
 import time
 import numpy as np
+ica = True
 
-Features_Y = pd.read_pickle("data/Features+Y.pkl")
-COHERENCE_Y_CLOSED = pd.read_pickle("data/Coherence+Y-CLOSED.pkl")
-COHERENCE_Y_OPEN = pd.read_pickle("data/Coherence+Y-OPEN.pkl")
-COHERENCE_FEATS_Y_CLOSED = pd.read_pickle("data/Coherence+Features+Y-CLOSED.pkl")
-COHERENCE_FEATS_Y_OPEN = pd.read_pickle("data/Coherence+Features+Y-OPEN.pkl")
+if ica == False:
+    Features_Y = pd.read_pickle("data/Features+Y.pkl")
+    COHERENCE_Y_CLOSED = pd.read_pickle("data/Coherence+Y-CLOSED.pkl")
+    COHERENCE_Y_OPEN = pd.read_pickle("data/Coherence+Y-OPEN.pkl")
+    COHERENCE_FEATS_Y_CLOSED = pd.read_pickle("data/Coherence+Features+Y-CLOSED.pkl")
+    COHERENCE_FEATS_Y_OPEN = pd.read_pickle("data/Coherence+Features+Y-OPEN.pkl")
+else:
+    Features_Y = pd.read_pickle("data/Features+Y.pkl")
+    COHERENCE_Y_CLOSED = pd.read_pickle("data/ICA_Coherence+Y-CLOSED.pkl")
+    COHERENCE_Y_OPEN = pd.read_pickle("data/ICA_Coherence+Y-OPEN.pkl")
+    COHERENCE_FEATS_Y_CLOSED = pd.read_pickle("data/ICA_Coherence+Features+Y-CLOSED.pkl")
+    COHERENCE_FEATS_Y_OPEN = pd.read_pickle("data/ICA_Coherence+Features+Y-OPEN.pkl")
+
+# We use ICA_COH+FEATS+Y as the dimensionality reduction matrix because it has the lowest amount of patients - we want all the other combs to have the same dims
+dim_regulator = pd.read_pickle("data/ICA_Coherence+Features+Y-OPEN.pkl")
+# drop indexes of COHERENCE_Y_CLOSED, COHERENCE_Y_OPEN and Features_Y that are not in COHERENCE_FEATS_Y_CLOSED
+# This ensures all training sets have the same amount fo patients
+COHERENCE_Y_CLOSED = COHERENCE_Y_CLOSED.drop(COHERENCE_Y_CLOSED.index.difference(dim_regulator.index))
+COHERENCE_Y_OPEN = COHERENCE_Y_OPEN.drop(COHERENCE_Y_OPEN.index.difference(dim_regulator.index))
+Features_Y = Features_Y.drop(Features_Y.index.difference(dim_regulator.index))
+
+# import warnings filter
+from warnings import simplefilter
+# ignore all future warnings
+simplefilter(action='ignore')
 
 closed_eyes_ridge = {
     "COHERENCE+Y": COHERENCE_Y_CLOSED,
@@ -33,11 +54,21 @@ def RidgeReg(key,data):
     X = data.iloc[:, :-6]
     y = data.iloc[:, -6:]
 
+
     # Get R-squared and relative error for each target
     for col in y:
         y1 = y[col]
         # Split into train and test
-        X_train, X_test, y_train, y_test = train_test_split(X, y1, test_size=0.15, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y1, test_size=0.2, random_state=42)
+        if "Feature" in key:
+            # compute mean and std for X_train
+            X_train_mean = X_train.mean()
+            X_train_std = X_train.std()
+            # Standardize X_train
+            X_train = (X_train - X_train_mean) / X_train_std
+            # Use X_train_mean and X_train_std to standardize X_test
+            X_test = (X_test - X_train_mean) / X_train_std
+
 
         # loop through different values of alpha and find the best one and use it
         best_score = 0
@@ -51,13 +82,26 @@ def RidgeReg(key,data):
                 best_alpha = alpha
         model = Ridge(alpha=best_alpha)
         model.fit(X_train, y_train)
-        scores[col] = model.score(X_test, y_test)
+        y_pred = model.predict(X_test)
+        TSS = np.sum((y_test - y_train.mean())**2)
+        RSS = np.sum((y_test - y_pred)**2)
+        r_squared = 1 - RSS/TSS
+        scores[col] = r_squared
+
         # # Compute relative error for X_test and y_test. Add small epsilon value to avoid division by zero
-        relative_error[col] = np.mean(np.abs(y_test - model.predict(X_test)) / (y_test + 1e-10))
+        # relative_error[col] = np.mean(np.abs(y_test - model.predict(X_test)) / (y_test + 1e-10))
 
 
     # Get R-squared (all response vars)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    if "Feature" in key:
+        # compute mean and std for X_train
+        X_train_mean = X_train.mean()
+        X_train_std = X_train.std()
+        # Standardize X_train
+        X_train = (X_train - X_train_mean) / X_train_std
+        # Use X_train_mean and X_train_std to standardize X_test
+        X_test = (X_test - X_train_mean) / X_train_std
     best_score = 0
     best_alpha = 0
     # loop through different values of alpha and find the best one and use it
@@ -70,11 +114,15 @@ def RidgeReg(key,data):
             best_alpha = alpha
     model = Ridge(alpha=best_alpha)
     model.fit(X_train, y_train)
-    scores["Y"] = model.score(X_test, y_test)
-    # Compute relative error for X_test and y_test
     y_pred = model.predict(X_test)
+    TSS = np.mean(np.sum((y_test - y_train.mean()) ** 2))
+    RSS = np.mean(np.sum((y_test - y_pred) ** 2))
+    r_squared = 1 - RSS / TSS
+    scores["Y"] = r_squared
+    # Compute relative error for X_test and y_test
+    # y_pred = model.predict(X_test)
     # compute relative error between the matrix y_pred and the matrix y_test
-    relative_error["Y"] = np.mean(np.mean(np.abs((y_pred-y_test))/(y_test+1e-10), axis=0))
+    # relative_error["Y"] = np.mean(np.mean(np.abs((y_pred-y_test))/(y_test+1e-10), axis=0))
 
     # convert scores to dataframe
     scores = pd.DataFrame(scores, index=[f"{key}"]).T
@@ -91,7 +139,7 @@ for key, data in closed_eyes_ridge.items():
     scores = RidgeReg(key,data)
     ridge_scores_closed = pd.concat([ridge_scores_closed, scores], axis=1)
 # rename the columns to "Coherence", "Coherence + Health" and "Health"
-ridge_scores_closed.columns = ["Coherence", "Coherence + Health", "Health"]
+ridge_scores_closed.columns = ["Coherence", "Coherence + Subject Info", "Subject Info"]
 # rename the last index of the dataframe to "All Response Variables"
 ridge_scores_closed.rename(index={"Y":"All Response Vars"}, inplace=True)
 
@@ -101,7 +149,7 @@ for key, data in open_eyes_ridge.items():
     scores = RidgeReg(key,data)
     ridge_scores_open = pd.concat([ridge_scores_open, scores], axis=1)
 # rename the columns to "Coherence", "Coherence + Health" and "Health"
-ridge_scores_open.columns = ["Coherence", "Coherence + Health", "Health"]
+ridge_scores_open.columns = ["Coherence", "Coherence + Subject Info", "Subject Info"]
 # rename the last index of the dataframe to "All Response Vars"
 ridge_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
 
@@ -109,6 +157,10 @@ ridge_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
 print(ridge_scores_closed.to_latex(index=True))
 print(ridge_scores_open.to_latex(index=True))
 
-# save the dataframes to pickle files
-ridge_scores_closed.to_pickle("data/Ridge_scores-closed.pkl")
-ridge_scores_open.to_pickle("data/Ridge_scores-open.pkl")
+if ica == False:
+    # save the dataframes to pickle files
+    ridge_scores_closed.to_pickle("data/Ridge_scores-closed.pkl")
+    ridge_scores_open.to_pickle("data/Ridge_scores-open.pkl")
+else:
+    ridge_scores_closed.to_pickle("data/ICA_Ridge_scores-closed.pkl")
+    ridge_scores_open.to_pickle("data/ICA_Ridge_scores-open.pkl")

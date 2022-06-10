@@ -21,6 +21,11 @@ PCA_FEATS_Y_OPEN = pd.read_pickle("data/PCA+Features+Y-OPEN.pkl") # (265, 73)
 PCA_FEATS_Y_CLOSED = pd.read_pickle("data/PCA+Features+Y-CLOSED.pkl") # (265, 73)
 Features_Y = pd.read_pickle("data/Features+Y.pkl") # (265, 23)
 
+# drop the indexes in PCA_Y_CLOSED, PCA_Y_OPEN and FEATURES_Y that are not in PCA_FEATS_Y_CLOSED
+PCA_Y_CLOSED = PCA_Y_CLOSED.drop(PCA_Y_CLOSED.index.difference(PCA_FEATS_Y_CLOSED.index))
+PCA_Y_OPEN = PCA_Y_OPEN.drop(PCA_Y_OPEN.index.difference(PCA_FEATS_Y_OPEN.index))
+Features_Y = Features_Y.drop(Features_Y.index.difference(PCA_FEATS_Y_CLOSED.index))
+
 open_eyes_pca = {
     "PCA+Y": PCA_Y_OPEN,
     "PCA+Features+Y": PCA_FEATS_Y_OPEN,
@@ -36,8 +41,8 @@ def NeuralNetwork(key,data):
     X = data
     y = X.iloc[:, -6:]
     X = X.iloc[:, :-6]
-    X=X.to_numpy()
-    y=y.to_numpy()
+    X = X.to_numpy()
+    y = y.to_numpy()
     #for i in range(4): #standardization
         #y[:,i]=(y[:,i]-np.mean(y[:,i]))/np.std(y[:,i])
     
