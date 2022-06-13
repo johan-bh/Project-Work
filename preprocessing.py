@@ -10,8 +10,8 @@ import pickle
 import os
 
 activate_plots = False
-tensor_regression = False
-run_ICA = True
+tensor_regression = True
+run_ICA = False
 mne.utils.set_config('MNE_USE_CUDA', 'true')  # Use GPU for ICA etc.
 # Check if GPU is available. n_jobs = 1 (CPU) n_jobs = "cuda" (GPU). n_jobs is a param for filter functions etc.
 if mne.utils.get_config('MNE_USE_CUDA') == 'true':
@@ -101,11 +101,13 @@ def preprocessing(file_path):
                 # Extract frequency indices on CoherenceAnalyzer object
                 freq_idx = np.where((C.frequencies > value[0]) * (C.frequencies < value[1]))[0]
                 coherence_map = np.mean(C.coherence[:, :, freq_idx], -1)
+                print(coherence_map.shape)
                 # append each 2d array to coherence_maps
                 coherence_maps = np.append(coherence_maps, coherence_map)
             # reshape coherence_maps to 3d array
             try:
-                coherence_maps = np.reshape(coherence_maps, (64, 64, 7))
+                # coherence_maps = np.reshape(coherence_maps, (64, 64, 7))
+                print(coherence_maps.shape)
                 coh_list.append(coherence_maps)
             except:
                 coh_list = None
@@ -130,93 +132,96 @@ def preprocessing(file_path):
 # load "data/valid_files.pkl"
 valid_files = pickle.load(open("data/valid_files.pkl", "rb"))
 
+file_path = "C:/Users/jbhan/Desktop/AA_CESA-2-DATA-EEG-Resting (Anden del)/S183_11123_R001.dat"
+print(preprocessing(file_path))
+
 # Create a dictionary with id as key and coherence map as value
 coherence_maps = {}
 counter = 0
-for id,file_name in valid_files.items():
-    # Create counter that counts how many files have been processed
-    print(f"{file_name}" + " is being processed...")
-    print("Current progress: " + str(int(counter+1)) + "/" + str(len(valid_files)))
-    result = preprocessing(file_name)
-    if result == None:
-        print("Error in preprocessing")
-        continue
-    else:
-        coherence_maps[id] = result
-        counter += 1
+# for id,file_name in valid_files.items():
+#     # Create counter that counts how many files have been processed
+#     print(f"{file_name}" + " is being processed...")
+#     print("Current progress: " + str(int(counter+1)) + "/" + str(len(valid_files)))
+#     result = preprocessing(file_name)
+#     if result == None:
+#         print("Error in preprocessing")
+#         continue
+#     else:
+#         coherence_maps[id] = result
+#         counter += 1
 
-
-# Split coherence maps into two dicts. Use value index 0 for open eyes and value index 1 for closed eyes
-coherence_maps_open = {k: v[0] for k, v in coherence_maps.items()}
-coherence_maps_closed = {k: v[1] for k, v in coherence_maps.items()}
-
-if tensor_regression == True:
-    if run_ICA == True:
-        with open('data/ICA_tensor_data_open.pkl', 'wb') as f:
-            pickle.dump(coherence_maps_open, f)
-        with open('data/ICA_tensor_data_closed.pkl', 'wb') as f:
-            pickle.dump(coherence_maps_closed, f)
-    else:
-        with open('data/tensor_data_open.pkl', 'wb') as f:
-            pickle.dump(coherence_maps_open, f)
-        with open('data/tensor_data_closed.pkl', 'wb') as f:
-            pickle.dump(coherence_maps_closed, f)
-else:
-    if run_ICA == True:
-        # Save dictionaries as pickle files for later use
-        with open('data/ICA_coherence_maps_open.pkl', 'wb') as f:
-            pickle.dump(coherence_maps_open, f)
-        with open('data/ICA_coherence_maps_closed.pkl', 'wb') as f:
-            pickle.dump(coherence_maps_closed, f)
-    else:
-        # Save dictionaries as pickle files for later use
-        with open('data/coherence_maps_open.pkl', 'wb') as f:
-            pickle.dump(coherence_maps_open, f)
-        with open('data/coherence_maps_closed.pkl', 'wb') as f:
-            pickle.dump(coherence_maps_closed, f)
-
-# Create a seperate file for plotting later
-if activate_plots == True:
-    def add_arrows(axes):
-        for ax in axes:
-            freqs = ax.lines[-1].get_xdata()
-            psds = ax.lines[-1].get_ydata()
-            for freq in (50, 100, 150):
-                idx = np.searchsorted(freqs, freq)
-                # get ymax of a small region around the freq. of interest
-                y = psds[(idx - 4):(idx + 5)].max()
-                ax.arrow(x=freqs[idx], y=y + 18, dx=0, dy=-12, color='red',
-                         width=0.1, head_width=3, length_includes_head=True)
-
-
-    raw_downsampled = raw_data.copy().resample(sfreq=250)
-    # PSD plots for Original vs downsampled
-    for data, title in zip([raw_data,raw_downsampled], ['Original Data (2000 Hz)','Downsampled Data (250Hz)']):
-        fig = data.plot_psd(average=True,area_mode='range', show=False)
-        fig.subplots_adjust(top=0.75)
-        fig.suptitle(title, size='xx-large', weight='bold')
-        plt.setp(fig.axes, xlim=(0, 300))
-        plt.savefig(f"figures/psd_plot_{title}.png")
-
-    # Plot powerline artefacts
-    fig = raw_data.plot_psd(fmax=250, average=True, show=False)
-    add_arrows(fig.axes[:2])
-    fig.subplots_adjust(top=0.75)
-    fig.suptitle("Powerline artefacts", size='xx-large', weight='bold')
-    plt.savefig(f"figures/powerline_artefacts.png")
-    # Plot Unfiltered vs Notch filtered
-    freqs = (50, 100, 150)
-    raw_notch = raw_data.copy().notch_filter(freqs=freqs)
-    for title, data in zip(['Un', 'Notch '], [raw_data, raw_notch]):
-        fig = data.plot_psd(fmax=250, average=True, show=False)
-        fig.subplots_adjust(top=0.75)
-        fig.suptitle('{}filtered'.format(title), size='xx-large', weight='bold')
-        add_arrows(fig.axes[:2])
-        plt.savefig(f"figures/notch-filtering.png")
-
-    # Band-pass filtering (0.5 - 70 Hz )
-    raw_data.filter(0.5, 70., fir_design='firwin')
-    fig = raw_data.plot_psd(average=True, show=False)
-    fig.subplots_adjust(top=0.75)
-    fig.suptitle("Band-pass filtered (0.5-70 Hz)", size='xx-large', weight='bold')
-    plt.savefig(f"figures/band-pass.png")
+#
+# # Split coherence maps into two dicts. Use value index 0 for open eyes and value index 1 for closed eyes
+# coherence_maps_open = {k: v[0] for k, v in coherence_maps.items()}
+# coherence_maps_closed = {k: v[1] for k, v in coherence_maps.items()}
+#
+# if tensor_regression == True:
+#     if run_ICA == True:
+#         with open('data/ICA_tensor_data_open.pkl', 'wb') as f:
+#             pickle.dump(coherence_maps_open, f)
+#         with open('data/ICA_tensor_data_closed.pkl', 'wb') as f:
+#             pickle.dump(coherence_maps_closed, f)
+#     else:
+#         with open('data/tensor_data_open.pkl', 'wb') as f:
+#             pickle.dump(coherence_maps_open, f)
+#         with open('data/tensor_data_closed.pkl', 'wb') as f:
+#             pickle.dump(coherence_maps_closed, f)
+# else:
+#     if run_ICA == True:
+#         # Save dictionaries as pickle files for later use
+#         with open('data/ICA_coherence_maps_open.pkl', 'wb') as f:
+#             pickle.dump(coherence_maps_open, f)
+#         with open('data/ICA_coherence_maps_closed.pkl', 'wb') as f:
+#             pickle.dump(coherence_maps_closed, f)
+#     else:
+#         # Save dictionaries as pickle files for later use
+#         with open('data/coherence_maps_open.pkl', 'wb') as f:
+#             pickle.dump(coherence_maps_open, f)
+#         with open('data/coherence_maps_closed.pkl', 'wb') as f:
+#             pickle.dump(coherence_maps_closed, f)
+#
+# # Create a seperate file for plotting later
+# if activate_plots == True:
+#     def add_arrows(axes):
+#         for ax in axes:
+#             freqs = ax.lines[-1].get_xdata()
+#             psds = ax.lines[-1].get_ydata()
+#             for freq in (50, 100, 150):
+#                 idx = np.searchsorted(freqs, freq)
+#                 # get ymax of a small region around the freq. of interest
+#                 y = psds[(idx - 4):(idx + 5)].max()
+#                 ax.arrow(x=freqs[idx], y=y + 18, dx=0, dy=-12, color='red',
+#                          width=0.1, head_width=3, length_includes_head=True)
+#
+#
+#     raw_downsampled = raw_data.copy().resample(sfreq=250)
+#     # PSD plots for Original vs downsampled
+#     for data, title in zip([raw_data,raw_downsampled], ['Original Data (2000 Hz)','Downsampled Data (250Hz)']):
+#         fig = data.plot_psd(average=True,area_mode='range', show=False)
+#         fig.subplots_adjust(top=0.75)
+#         fig.suptitle(title, size='xx-large', weight='bold')
+#         plt.setp(fig.axes, xlim=(0, 300))
+#         plt.savefig(f"figures/psd_plot_{title}.png")
+#
+#     # Plot powerline artefacts
+#     fig = raw_data.plot_psd(fmax=250, average=True, show=False)
+#     add_arrows(fig.axes[:2])
+#     fig.subplots_adjust(top=0.75)
+#     fig.suptitle("Powerline artefacts", size='xx-large', weight='bold')
+#     plt.savefig(f"figures/powerline_artefacts.png")
+#     # Plot Unfiltered vs Notch filtered
+#     freqs = (50, 100, 150)
+#     raw_notch = raw_data.copy().notch_filter(freqs=freqs)
+#     for title, data in zip(['Un', 'Notch '], [raw_data, raw_notch]):
+#         fig = data.plot_psd(fmax=250, average=True, show=False)
+#         fig.subplots_adjust(top=0.75)
+#         fig.suptitle('{}filtered'.format(title), size='xx-large', weight='bold')
+#         add_arrows(fig.axes[:2])
+#         plt.savefig(f"figures/notch-filtering.png")
+#
+#     # Band-pass filtering (0.5 - 70 Hz )
+#     raw_data.filter(0.5, 70., fir_design='firwin')
+#     fig = raw_data.plot_psd(average=True, show=False)
+#     fig.subplots_adjust(top=0.75)
+#     fig.suptitle("Band-pass filtered (0.5-70 Hz)", size='xx-large', weight='bold')
+#     plt.savefig(f"figures/band-pass.png")

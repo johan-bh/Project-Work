@@ -144,6 +144,10 @@ def clean_file2():
     df2.index = df2.index.astype(str)
     # Delete all rows that are not in valid_ids
     df2 = df2.drop(df2.index[~df2.index.isin(valid_ids)])
+    # replace nan values for all columns with most frequent value that corresponds to the column
+    for col in df2.columns:
+        df2[col] = df2[col].fillna(df2[col].mode()[0])
+
     return df2
 
 def merge_features():
@@ -157,8 +161,8 @@ def merge_features():
     # merge df and df2
     features = pd.concat([df, df2], axis=1)
     # # save df to pickle file data/clean_features.pkl
-    df.to_pickle("data/clean_features.pkl")
-    return features
+    features.to_pickle("data/clean_features.pkl")
+    return features.columns
 
 def get_response_vars():
     # Read second tab of excel file
@@ -181,5 +185,5 @@ def get_response_vars():
 
 # print(clean_file1())
 # print(clean_file2())
-# print(merge_features())
-print(get_response_vars())
+print(merge_features())
+# print(get_response_vars())
