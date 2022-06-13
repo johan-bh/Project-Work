@@ -11,8 +11,10 @@ import matplotlib.pyplot as plt
 # Use tensor regression to reduce size of 3D matrix of size 64x64x7 to single value 64 + 7 = 71
 
 data = pd.read_pickle("data/tensor_data_open.pkl")
-#response_var = pd.read_pickle("data/response_var_df.pkl")
-labels = 1 # Define later
+
+#with open('data/response_var_df.pkl', 'rb') as f:
+#    response_var_df = pickle.load(f)
+
 
 
 keys = list()
@@ -26,19 +28,29 @@ batch_size = 32
 x = data["12069"]
 
 #Actual Implementation
-rank = 3
-gamma = np.ones((7,1))
-alpha = np.ones((64,1))
-CP = {}
-for i in range(rank):
-    CP["gamma" + str(i)] = gamma
-    CP["alpha" + str(i)] = alpha
-
-def Cost():
-    for i in range()
 
 
-f = 3
+def Loss_function(Xn, Yn, rank=1):
+    gamma = np.ones((7, 1))
+    alpha = np.ones((64, 1))
+    CP = {}
+    for i in range(rank):
+        CP["gamma" + str(i)] = gamma
+        CP["alpha" + str(i)] = alpha
+
+    for k in range(7):
+        for j in range(64):
+            for i in range(64):
+                if i<=j:
+                    continue
+
+                for d in range(rank):
+                    CP["alpha"+str(d)][i]*CP["alpha"+str(d)][i]*CP["beta"+str(d)][j]
+
+                Xn[i][j][k]
+
+Loss_function(x, 29, rank=2)
+
 
 
 
