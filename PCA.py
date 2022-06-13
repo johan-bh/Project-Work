@@ -72,12 +72,6 @@ df_closed.dropna(inplace=True)
 df_open.dropna(inplace=True)
 
 
-valid_ids = list(df_closed.index)
-# pickle valid_ids
-with open('data/valid_ids.pkl', 'wb') as f:
-    pickle.dump(valid_ids, f)
-
-
 # Delete all rows in df_closed and df_open that dont have the same index as df
 # This ensures we have the same number of rows in both dataframes.
 df_closed = df_closed.drop(df_closed.index[~df_closed.index.isin(response_var_df.index)])
