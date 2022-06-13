@@ -22,12 +22,19 @@ else:
     COHERENCE_FEATS_Y_OPEN = pd.read_pickle("data/ICA_Coherence+Features+Y-OPEN.pkl")
 
 # We use ICA_COH+FEATS+Y as the dimensionality reduction matrix because it has the lowest amount of patients - we want all the other combs to have the same dims
-dim_regulator = pd.read_pickle("data/ICA_Coherence+Features+Y-OPEN.pkl")
-# drop indexes of COHERENCE_Y_CLOSED, COHERENCE_Y_OPEN and Features_Y that are not in COHERENCE_FEATS_Y_CLOSED
-# This ensures all training sets have the same amount fo patients
+dim_regulator = pd.read_pickle("data/ICA_PCA+Features+Y-OPEN.pkl")
+# drop the indexes in PCA_Y_CLOSED, PCA_Y_OPEN and FEATURES_Y that are not in PCA_FEATS_Y_CLOSED
 COHERENCE_Y_CLOSED = COHERENCE_Y_CLOSED.drop(COHERENCE_Y_CLOSED.index.difference(dim_regulator.index))
 COHERENCE_Y_OPEN = COHERENCE_Y_OPEN.drop(COHERENCE_Y_OPEN.index.difference(dim_regulator.index))
+COHERENCE_FEATS_Y_OPEN = COHERENCE_FEATS_Y_OPEN.drop(COHERENCE_FEATS_Y_OPEN.index.difference(dim_regulator.index))
+COHERENCE_FEATS_Y_CLOSED = COHERENCE_FEATS_Y_CLOSED.drop(COHERENCE_FEATS_Y_CLOSED.index.difference(dim_regulator.index))
 Features_Y = Features_Y.drop(Features_Y.index.difference(dim_regulator.index))
+
+print(COHERENCE_Y_CLOSED.shape)
+print(COHERENCE_Y_OPEN.shape)
+print(COHERENCE_FEATS_Y_OPEN.shape)
+print(COHERENCE_FEATS_Y_CLOSED.shape)
+print(Features_Y.shape)
 
 # import warnings filter
 from warnings import simplefilter

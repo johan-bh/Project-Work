@@ -37,7 +37,8 @@ dim_regulator = pd.read_pickle("data/ICA_PCA+Features+Y-OPEN.pkl")
 # drop the indexes in PCA_Y_CLOSED, PCA_Y_OPEN and FEATURES_Y that are not in PCA_FEATS_Y_CLOSED
 PCA_Y_CLOSED = PCA_Y_CLOSED.drop(PCA_Y_CLOSED.index.difference(dim_regulator.index))
 PCA_Y_OPEN = PCA_Y_OPEN.drop(PCA_Y_OPEN.index.difference(dim_regulator.index))
-Features_Y = Features_Y.drop(Features_Y.index.difference(dim_regulator.index))
+PCA_FEATS_Y_CLOSED = PCA_FEATS_Y_CLOSED.drop(PCA_FEATS_Y_CLOSED.index.difference(dim_regulator.index))
+PCA_FEATS_Y_OPEN = PCA_FEATS_Y_OPEN.drop(PCA_FEATS_Y_OPEN.index.difference(dim_regulator.index))
 
 open_eyes_pca = {
     "PCA+Y": PCA_Y_OPEN,
