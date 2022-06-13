@@ -11,7 +11,7 @@ import numpy as np
 
 
 def train_neural_net(model, loss_fn, X, y,
-                     n_replicates=3, max_iter = 10000, tolerance=1e-6):
+                     n_replicates, max_iter, tolerance=1e-6):
     """
     Train a neural network with PyTorch based on a training set consisting of
     observations X and class y. The model and loss_fn inputs define the
@@ -81,7 +81,7 @@ def train_neural_net(model, loss_fn, X, y,
     
     import torch
     # Specify maximum number of iterations for training
-    logging_frequency = 1000 # display the loss every 1000th iteration
+
     best_final_loss = 1e100
     for r in range(n_replicates):
         #print('\n\tReplicate: {}/{}'.format(r+1, n_replicates))

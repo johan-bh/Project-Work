@@ -12,14 +12,32 @@ import torch
 from sklearn import model_selection
 from trainNN import train_neural_net
 import pandas as pd
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-# Load all data combinations
-PCA_Y_CLOSED = pd.read_pickle("data/PCA+Y-CLOSED.pkl") # (328, 56)
-PCA_Y_OPEN = pd.read_pickle("data/PCA+Y-OPEN.pkl") # (328, 56)
-PCA_FEATS_Y_OPEN = pd.read_pickle("data/PCA+Features+Y-OPEN.pkl") # (265, 73)
-PCA_FEATS_Y_CLOSED = pd.read_pickle("data/PCA+Features+Y-CLOSED.pkl") # (265, 73)
-Features_Y = pd.read_pickle("data/Features+Y.pkl") # (265, 23)
+ica = True
+
+if ica == False:
+    # Load all data combinations
+    PCA_Y_CLOSED = pd.read_pickle("data/PCA+Y-CLOSED.pkl") # (328, 56)
+    PCA_Y_OPEN = pd.read_pickle("data/PCA+Y-OPEN.pkl") # (328, 56)
+    PCA_FEATS_Y_OPEN = pd.read_pickle("data/PCA+Features+Y-OPEN.pkl") # (265, 73)
+    PCA_FEATS_Y_CLOSED = pd.read_pickle("data/PCA+Features+Y-CLOSED.pkl") # (265, 73)
+    Features_Y = pd.read_pickle("data/Features+Y.pkl") # (265, 23)
+else:
+    # Load all data combinations
+    PCA_Y_CLOSED = pd.read_pickle("data/ICA_PCA+Y-CLOSED.pkl") # (318, 56)
+    PCA_Y_OPEN = pd.read_pickle("data/ICA_PCA+Y-OPEN.pkl") # (318, 56)
+    PCA_FEATS_Y_OPEN = pd.read_pickle("data/ICA_PCA+Features+Y-OPEN.pkl") # (256, 73)
+    PCA_FEATS_Y_CLOSED = pd.read_pickle("data/ICA_PCA+Features+Y-CLOSED.pkl") # (256, 73)
+    Features_Y = pd.read_pickle("data/Features+Y.pkl") # (265, 23)
+
+# We use ICA_COH+FEATS+Y as the dimensionality reduction matrix because it has the lowest amount of patients - we want all the other combs to have the same dims
+dim_regulator = pd.read_pickle("data/ICA_PCA+Features+Y-OPEN.pkl")
+# drop the indexes in PCA_Y_CLOSED, PCA_Y_OPEN and FEATURES_Y that are not in PCA_FEATS_Y_CLOSED
+PCA_Y_CLOSED = PCA_Y_CLOSED.drop(PCA_Y_CLOSED.index.difference(dim_regulator.index))
+PCA_Y_OPEN = PCA_Y_OPEN.drop(PCA_Y_OPEN.index.difference(dim_regulator.index))
+Features_Y = Features_Y.drop(Features_Y.index.difference(dim_regulator.index))
 
 open_eyes_pca = {
     "PCA+Y": PCA_Y_OPEN,
@@ -36,22 +54,20 @@ def NeuralNetwork(key,data):
     X = data
     y = X.iloc[:, -6:]
     X = X.iloc[:, :-6]
-    X=X.to_numpy()
-    y=y.to_numpy()
-    #for i in range(4): #standardization
-        #y[:,i]=(y[:,i]-np.mean(y[:,i]))/np.std(y[:,i])
+    X = X.to_numpy()
+    y = y.to_numpy()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+  
     
     N, M = X.shape
     
     # Parameters for neural network classifier
-    n_hidden_units1 = round(M*(2/3))
-    n_hidden_units2 = round(n_hidden_units1*(2/3))      # number of hidden units
-    n_replicates = 1       # number of networks trained in each k-fold
-    max_iter = 100000
+    n_hidden_units1 = round(M*(2/3))+6#round((1/2*M)+6)
+    n_hidden_units2 = round(n_hidden_units1*(2/3))+6      # number of hidden units
+    n_replicates = 10       # number of networks trained in each k-fold
+    max_iter = 200
     
-    # K-fold crossvalidation
-    K = 5                # only three folds to speed up this example
-    CV = model_selection.KFold(K, shuffle=True)
+
     
     # Define the model
     model = lambda: torch.nn.Sequential(
@@ -64,81 +80,131 @@ def NeuralNetwork(key,data):
                         )
     loss_fn = torch.nn.MSELoss() # notice how this is now a mean-squared-error loss
     
-    #print('Training model of type:\n\n{}\n'.format(str(model())))
-    errors = [] # make a list for storing generalizaition error in each loop
-    for (k, (train_index, test_index)) in enumerate(CV.split(X,y)): 
-        #print('\nCrossvalidation fold: {0}/{1}'.format(k+1,K))    
-        
-        # Extract training and test set for current CV fold, convert to tensors
-        
 
         
-        X_train = torch.Tensor(X[train_index,:])
-        y_train = torch.Tensor(y[train_index])
-        X_test = torch.Tensor(X[test_index,:])
-        y_test = torch.Tensor(y[test_index])
-        
-        
-        #standardization of response variables
-        y_train_mean = sum(y_train)/len(y_train)
-        y_train_std=y_train.std(axis=0)
-        y_train=(y_train-y_train_mean)/y_train_std
-       
-        y_test_mean = sum(y_test)/len(y_test)
-        y_test_std=y_test.std(axis=0)
-        y_test=(y_test-y_test_mean)/y_test_std
-    
-        """
-        #Standardization of inputs, so that ADAM learns faster
-        X_train_mean = sum(X_train)/len(X_train)
-        X_std=X_train.std(axis=0)
-        X_train=(X_train-X_train_mean)/X_std
-        X_test=(X_test-X_train_mean)/X_std
-        """
-        
-        # Train the net on training data
-        net, final_loss, learning_curve = train_neural_net(model,
-                                                           loss_fn,
-                                                           X=X_train,
-                                                           y=y_train,
-                                                           n_replicates=n_replicates,
-                                                           max_iter=max_iter)
-        
-        #print('\n\tBest loss: {}\n'.format(final_loss))
-        
-        # Determine estimated class labels for test set
-        y_test_est = net(X_test)
-        # Determine the R-squared error
-        y_train_mean = sum(y_train)/len(y_train)
-        enumerator=sum((y_test.float()-y_test_est.float())**2)
-        denumerator=sum((y_test.float()-y_train_mean.float())**2)
-        r2=(1-(enumerator/denumerator)).data.numpy()
-        errors.append(r2) # store error rate for current CV fold 
-        
-        # Determine errors and errors
-        #se = (y_test_est.float()-y_test.float())**2 # squared error
-        #mse = (sum(se).type(torch.float)/len(y_test)).data.numpy() #mean
-        
+    X_train = torch.Tensor(X_train)
+    y_train = torch.Tensor(y_train)
+    X_test = torch.Tensor(X_test)
+    y_test = torch.Tensor(y_test)
     
     
-    np_errors=np.array([errors[0],errors[1],errors[2],errors[3],errors[4]])
-    bestModelIndex=np.where(np_errors.mean(axis=1)==np.max(np_errors.mean(axis=1)))[0][0]
-    np_errors=np_errors[bestModelIndex,:]
+    #standardization of response variables
+    y_train_mean = sum(y_train)/len(y_train)
+    y_train_std=y_train.std(axis=0)
+    y_train=(y_train-y_train_mean)/y_train_std
+   
+    y_test_mean = sum(y_test)/len(y_test)
+    y_test_std=y_test.std(axis=0)
+    y_test=(y_test-y_test_mean)/y_test_std
+
+    """
+    #Standardization of inputs, so that ADAM learns faster
+    X_train_mean = sum(X_train)/len(X_train)
+    X_std=X_train.std(axis=0)
+    X_train=(X_train-X_train_mean)/X_std
+    X_test=(X_test-X_train_mean)/X_std
+    """
+    
+    net, final_loss, learning_curve = train_neural_net(model,
+                                                       loss_fn,
+                                                       X=X_train,
+                                                       y=y_train,
+                                                       n_replicates=n_replicates,
+                                                       max_iter=max_iter)
+    
         
-    return np_errors
+    # Determine estimated class labels for test set
+    y_test_est = net(X_test)
+    # Determine the R-squared error for each individual output node
+    y_train_mean = sum(y_train)/len(y_train)
+    enumerator=sum((y_test.float()-y_test_est.float())**2)
+    denumerator=sum((y_test.float()-y_train_mean.float())**2)
+    testError=(1-(enumerator/denumerator)).data.numpy()
+    
+    #Run the model on the training data set
+    y_train_est = net(X_train)
+    #Calculating the training errors
+    y_train_mean = sum(y_train)/len(y_train)
+    enumerator=sum((y_train.float()-y_train_est.float())**2)
+    denumerator=sum((y_train.float()-y_train_mean.float())**2)
+    trainError=(1-(enumerator/denumerator)).data.numpy()
 
 
+    # Determine the total R-squared error
+    #y_train_mean_total=y_train.data.numpy().mean()
+    #enumerator_total=sum(sum((y_test.float()-y_test_est.float())**2))
+    #denumerator_total=sum(sum((y_test.float()-y_train_mean_total)**2))
+    #error_total=(1-(enumerator_total/denumerator_total)).data.numpy()
+    #np_errors=np.append(np_errors, )
+
+        
+    return testError, trainError, y_test, y_test_est, y_train, y_train_est
+
+    
+# run the NN for all inputs with closed eyes, and R-squared for test and train error in two dfferent matrices
+pca_scores_closed = pd.DataFrame()
+pca_scores_closed_train = pd.DataFrame()
 for key, data in closed_eyes_pca.items():
-    errors = NeuralNetwork(key,data)
-    print(key)
-    print(round(np.mean(errors),3))
-    print(np.round(errors,3))
+    errors, trainErrors, y_test, y_test_est, y_train, y_train_est = NeuralNetwork(key,data)
+    errors = np.append(errors, np.mean(errors))
+    pca_scores_closed=pd.concat([pca_scores_closed, pd.DataFrame(errors)], axis=1)
+    trainErrors = np.append(trainErrors, np.mean(trainErrors))
+    pca_scores_closed_train=pd.concat([pca_scores_closed_train, pd.DataFrame(trainErrors)], axis=1)
+    #plotting the training model
+    y_train=y_train.data.numpy()
+    y_train_est=y_train_est.data.numpy()
+    axis_range = [np.min([y_train_est, y_train])-1,np.max([y_train_est, y_train])+1]
+    plt.plot(axis_range,axis_range,'k--')
+    plt.plot(y_train, y_train_est,'ob',alpha=.25)
+    plt.legend(['Perfect estimation','Model estimations'])
+    plt.title('Estimated versus true value (for last CV-fold)')
+    plt.ylim(axis_range); plt.xlim(axis_range)
+    plt.xlabel('True value')
+    plt.ylabel('Estimated value')
+    plt.grid()
 
+    plt.show()
+    y_test=y_test.data.numpy()
+    y_test_est=y_test_est.data.numpy()
+    axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
+    plt.plot(axis_range,axis_range,'k--')
+    plt.plot(y_test, y_test_est,'ob',alpha=.25)
+    plt.legend(['Perfect estimation','Model estimations'])
+    plt.title('Estimated versus true value (for last CV-fold)')
+    plt.ylim(axis_range); plt.xlim(axis_range)
+    plt.xlabel('True value')
+    plt.ylabel('Estimated value')
+    plt.grid()
+
+    plt.show()
+
+# rename columns of dataframe
+pca_scores_closed.columns = ["PCA", "PCA + Subj_Info", "Subj_Info"]
+# rename index of the dataframe
+pca_scores_closed.index = ["MMSE", "ACE", "TMT A", "TMT B", "DigitSymbol", "Retention", "All"]
+
+
+# run the NN for all inputs with open eyes, and R-squared for test and train error in two dfferent matrices
+pca_scores_open = pd.DataFrame()
+pca_scores_open_train = pd.DataFrame()
 for key, data in open_eyes_pca.items():
-    errors = NeuralNetwork(key,data)
-    print(key)
-    print(round(np.mean(errors),3))
-    print(np.round(errors,3))
+    errors, trainErrors, y_test, y_test_est, y_train, y_train_est = NeuralNetwork(key,data)
+    errors = np.append(errors, np.mean(errors))
+    pca_scores_open=pd.concat([pca_scores_open, pd.DataFrame(errors)], axis=1)
+    trainErrors = np.append(trainErrors, np.mean(trainErrors))
+    pca_scores_open_train=pd.concat([pca_scores_open_train, pd.DataFrame(trainErrors)], axis=1)
+
+# rename the columns of dataframe
+pca_scores_open.columns = ["PCA", "PCA + Subj_Info", "Subj_Info"]
+# rename index of the dataframe
+pca_scores_open.index = ["MMSE", "ACE", "TMT A", "TMT B", "DigitSymbol", "Retention", "All"]
+
+
+# print the dataframes to latex
+print(pca_scores_closed.to_latex(index=True))
+print(pca_scores_closed_train)
+print(pca_scores_open.to_latex(index=True))
+print(pca_scores_open_train)
         
 """
 

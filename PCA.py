@@ -5,13 +5,20 @@ import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 plotting = False
+ica = False
 
-print("Loading data...")
-# Load the processed data for eyes closed and eyes open
-with open('data/coherence_maps_closed.pkl', 'rb') as f:
-    coherence_maps_closed = pickle.load(f)
-with open('data/coherence_maps_open.pkl', 'rb') as f:
-    coherence_maps_open = pickle.load(f)
+if ica == False:
+    # Load the processed data for eyes closed and eyes open
+    with open('data/coherence_maps_closed.pkl', 'rb') as f:
+        coherence_maps_closed = pickle.load(f)
+    with open('data/coherence_maps_open.pkl', 'rb') as f:
+        coherence_maps_open = pickle.load(f)
+if ica == True:
+    # Load the processed data for eyes closed and eyes open
+    with open('data/ICA_coherence_maps_closed.pkl', 'rb') as f:
+        coherence_maps_closed = pickle.load(f)
+    with open('data/ICA_coherence_maps_open.pkl', 'rb') as f:
+        coherence_maps_open = pickle.load(f)
 
 # read response var dataframe
 with open('data/response_var_df.pkl', 'rb') as f:
@@ -64,6 +71,7 @@ df_open = pd.DataFrame.from_dict(coherence_maps_open, orient='index')
 df_closed.dropna(inplace=True)
 df_open.dropna(inplace=True)
 
+
 valid_ids = list(df_closed.index)
 # pickle valid_ids
 with open('data/valid_ids.pkl', 'wb') as f:
@@ -74,6 +82,11 @@ with open('data/valid_ids.pkl', 'wb') as f:
 # This ensures we have the same number of rows in both dataframes.
 df_closed = df_closed.drop(df_closed.index[~df_closed.index.isin(response_var_df.index)])
 df_open = df_open.drop(df_open.index[~df_open.index.isin(response_var_df.index)])
+response_var_df = response_var_df.drop(response_var_df.index[~response_var_df.index.isin(df_closed.index)])
+
+# pickle response_var_df
+with open('data/response_var_df.pkl', 'wb') as f:
+    pickle.dump(response_var_df, f)
 
 # Transpose the dataframe and reset index
 print("Transposing dataframes...")
@@ -101,14 +114,21 @@ df_closed_pca = pca_closed.transform(df_closed)
 print("Transforming data for open eyes...")
 df_open_pca = pca_open.transform(df_open)
 
-print(df_closed.head().T)
+
 
 print("Pickling PCA models...")
-# Pickle the PCA model
-with open('data/pca_closed.pkl', 'wb') as f:
-    pickle.dump(pca_closed, f)
-with open('data/pca_open.pkl', 'wb') as f:
-    pickle.dump(pca_open, f)
+if ica == False:
+    # Pickle the PCA model
+    with open('data/pca_closed.pkl', 'wb') as f:
+        pickle.dump(pca_closed, f)
+    with open('data/pca_open.pkl', 'wb') as f:
+        pickle.dump(pca_open, f)
+if ica == True:
+    # Pickle the PCA model
+    with open('data/ICA_pca_closed.pkl', 'wb') as f:
+        pickle.dump(pca_closed, f)
+    with open('data/ICA_pca_open.pkl', 'wb') as f:
+        pickle.dump(pca_open, f)
 
 if plotting == True:
     print("Plotting PCA results for eyes closed...")
