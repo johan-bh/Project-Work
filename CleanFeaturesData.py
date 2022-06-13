@@ -107,7 +107,10 @@ def clean_file1():
 
     # remove decimal point from the indexes of df
     df.index = df.index.map(lambda x: str(x).replace(".0", ""))
-    valid_ids = pd.read_pickle("data/valid_ids.pkl")
+    # load "data/valid_files.pkl"
+    valid_files = pd.read_pickle("data/valid_files.pkl")
+    # get list of keys in valid_files
+    valid_ids = list(valid_files.keys())
     df.index = df.index.astype(str)
 
     df = df.drop(df.index[~df.index.isin(valid_ids)])
@@ -139,7 +142,10 @@ def clean_file2():
     # drop the columns Methylmalonat, CRP, 25-OH-Vitamin D, 25-OH-Vitamin D ny metode nov 2017, HBA1C_DCCT (not enough data)
     df2.drop(["Methylmalonat", "CRP", "25-OH-Vitamin D", "25-OH-Vitamin D ny metode nov 2017", "HBA1C_DCCT"], axis=1, inplace=True)
 
-    valid_ids = pd.read_pickle("data/valid_ids.pkl")
+    # load "data/valid_files.pkl"
+    valid_files = pd.read_pickle("data/valid_files.pkl")
+    # get list of keys in valid_files
+    valid_ids = list(valid_files.keys())
     # Drop all rows that are not in valid_ids. Set index type of df to string
     df2.index = df2.index.astype(str)
     # Delete all rows that are not in valid_ids
@@ -174,8 +180,10 @@ def get_response_vars():
 
     # Remove entries with missing values (NaN)
     df = df.dropna()
-    # load "data/valid_ids.pkl" and convert to pandas series
-    valid_ids = pd.read_pickle("data/valid_ids.pkl")
+    # load "data/valid_files.pkl"
+    valid_files = pd.read_pickle("data/valid_files.pkl")
+    # get list of keys in valid_files
+    valid_ids = list(valid_files.keys())
     # Drop all rows that are not in valid_ids. Set index type of df to string
     df.index = df.index.astype(str)
     df = df.drop(df.index[~df.index.isin(valid_ids)])
@@ -184,6 +192,6 @@ def get_response_vars():
     return df.head(),df.shape
 
 # print(clean_file1())
-# print(clean_file2())
+print(clean_file2())
 print(merge_features())
-# print(get_response_vars())
+print(get_response_vars())

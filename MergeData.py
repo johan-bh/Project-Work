@@ -1,7 +1,7 @@
 import pandas as pd
 import pickle
 import time
-ica = False
+ica = True
 
 df = pd.read_pickle('data/response_var_df.pkl')
 
@@ -104,8 +104,6 @@ for n in ["closed","open"]:
 def Merge_Features_Y():
     """Merge Features with Response Vars"""
     features = pd.DataFrame(pd.read_pickle("data/clean_features.pkl"))
-    # print nan values in features
-    print(features.isnull().sum())
     response_vars = pd.DataFrame(pd.read_pickle("data/response_var_df.pkl"))
     # drop rows in response_vars that are not in features
     response_vars = response_vars.drop(response_vars.index[~response_vars.index.isin(features.index)])
@@ -115,10 +113,10 @@ def Merge_Features_Y():
     data = pd.concat([features,response_vars], axis=1)
     # Save the Features +  response vars (Y) matrix to a pickle file
     data.to_pickle("data/Features+Y.pkl")
-    return data
+    return data.shape
 
 # Merge Features + Y
-Merge_Features_Y()
+print(Merge_Features_Y())
 
 
 
@@ -169,7 +167,7 @@ def Merge_Coherence_Y():
         df_open.to_pickle("data/ICA_Coherence+Y-OPEN.pkl")
     return (df_closed,df_open)
 
-print(Merge_Coherence_Y())
+# print(Merge_Coherence_Y())
 
 def COH_Feature_Y_Dims():
     """Returns a dataframe "features" which has the dimensions of the overlap between Coherence Maps, Features and Y"""
