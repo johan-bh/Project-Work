@@ -6,7 +6,7 @@ pd.set_option('display.max_columns', 10)
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import numpy as np
-ica = True
+ica = False
 
 if ica == False:
     # Load all data combinations
@@ -126,7 +126,7 @@ pca_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
 print(pca_scores_closed.to_latex(index=True))
 print(pca_scores_open.to_latex(index=True))
 
-if ica == True
+if ica == True:
     # save the dataframes to pickle files
     pca_scores_closed.to_pickle("data/ICA_PCR_scores-closed.pkl")
     pca_scores_open.to_pickle("data/ICA_PCR_scores-open.pkl")
