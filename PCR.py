@@ -39,13 +39,13 @@ PCA_Y_OPEN = PCA_Y_OPEN.drop(PCA_Y_OPEN.index.difference(dim_regulator.index))
 PCA_FEATS_Y_CLOSED = PCA_FEATS_Y_CLOSED.drop(PCA_FEATS_Y_CLOSED.index.difference(dim_regulator.index))
 PCA_FEATS_Y_OPEN = PCA_FEATS_Y_OPEN.drop(PCA_FEATS_Y_OPEN.index.difference(dim_regulator.index))
 
-# print("Shape after dim. regulation")
-# print(PCA_Y_CLOSED.shape)
-# print(PCA_Y_OPEN.shape)
-# print(PCA_FEATS_Y_OPEN.shape)
-# print(PCA_FEATS_Y_CLOSED.shape)
-# print(Features_Y.shape)
-# print(dim_regulator.shape)
+print("Shape after dim. regulation")
+print(PCA_Y_CLOSED.shape)
+print(PCA_Y_OPEN.shape)
+print(PCA_FEATS_Y_OPEN.shape)
+print(PCA_FEATS_Y_CLOSED.shape)
+print(Features_Y.shape)
+print(dim_regulator.shape)
 
 
 open_eyes_pca = {
@@ -111,35 +111,35 @@ def PCR(key,data):
     return scores
 
 
-# pca_scores_closed = pd.DataFrame()
-# for key, data in closed_eyes_pca.items():
-#     scores = PCR(key,data)
-#     pca_scores_closed = pd.concat([pca_scores_closed, scores], axis=1)
-#
-# # rename the columns to "PCA", "PCA + Health" and "Health"
-# pca_scores_closed.columns = ["PCA", "PCA + Health", "Health"]
-# # rename the last index of the dataframe to "All Response Vars"
-# pca_scores_closed.rename(index={"Y":"All Response Vars"}, inplace=True)
-#
-# pca_scores_open = pd.DataFrame()
-# for key, data in open_eyes_pca.items():
-#     scores = PCR(key,data)
-#     pca_scores_open = pd.concat([pca_scores_open, scores], axis=1)
-# # rename the columns to "PCA", "PCA + Health" and "Health"
-# pca_scores_open.columns = ["PCA", "PCA + Health", "Health"]
-# # rename the last index of the dataframe to "All Response Vars"
-# pca_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
-#
-#
-# # print the dataframes to latex
-# print(pca_scores_closed.to_latex(index=True))
-# print(pca_scores_open.to_latex(index=True))
-#
-# if ica == True:
-#     # save the dataframes to pickle files
-#     pca_scores_closed.to_pickle("data/ICA_PCR_scores-closed.pkl")
-#     pca_scores_open.to_pickle("data/ICA_PCR_scores-open.pkl")
-# else:
-#     # save the dataframes to pickle files
-#     pca_scores_closed.to_pickle("data/PCR_scores-closed.pkl")
-#     pca_scores_open.to_pickle("data/PCR_scores-open.pkl")
+pca_scores_closed = pd.DataFrame()
+for key, data in closed_eyes_pca.items():
+    scores = PCR(key,data)
+    pca_scores_closed = pd.concat([pca_scores_closed, scores], axis=1)
+
+# rename the columns to "PCA", "PCA + Health" and "Health"
+pca_scores_closed.columns = ["PCA", "PCA + Health", "Health"]
+# rename the last index of the dataframe to "All Response Vars"
+pca_scores_closed.rename(index={"Y":"All Response Vars"}, inplace=True)
+
+pca_scores_open = pd.DataFrame()
+for key, data in open_eyes_pca.items():
+    scores = PCR(key,data)
+    pca_scores_open = pd.concat([pca_scores_open, scores], axis=1)
+# rename the columns to "PCA", "PCA + Health" and "Health"
+pca_scores_open.columns = ["PCA", "PCA + Health", "Health"]
+# rename the last index of the dataframe to "All Response Vars"
+pca_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
+
+
+# print the dataframes to latex
+print(pca_scores_closed.to_latex(index=True))
+print(pca_scores_open.to_latex(index=True))
+
+if ica == True:
+    # save the dataframes to pickle files
+    pca_scores_closed.to_pickle("data/ICA_PCR_scores-closed.pkl")
+    pca_scores_open.to_pickle("data/ICA_PCR_scores-open.pkl")
+else:
+    # save the dataframes to pickle files
+    pca_scores_closed.to_pickle("data/PCR_scores-closed.pkl")
+    pca_scores_open.to_pickle("data/PCR_scores-open.pkl")
