@@ -6,7 +6,7 @@ import pickle
 # import timer for timing the code
 import time
 import numpy as np
-ica = True
+ica = False
 
 if ica == False:
     Features_Y = pd.read_pickle("data/Features+Y.pkl")

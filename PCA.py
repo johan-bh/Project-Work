@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 plotting = False
-ica = False
+ica = True
 
 if ica == False:
     # Load the processed data for eyes closed and eyes open

@@ -42,10 +42,13 @@ for key,value in id_dict.items():
     if 'HEO' in raw_data.ch_names and 'VEO' in raw_data.ch_names:
         valid_files.append(file_path)
 
+
 # only keep the files in id_dict that are in valid_files
 id_dict = {key:value for key,value in id_dict.items() if value in valid_files}
 # pickle the id_dict
 with open('data/valid_files.pkl', 'wb') as f:
     pickle.dump(id_dict, f)
 
+# print keys of id_dict
+print(len(id_dict.keys()))
 

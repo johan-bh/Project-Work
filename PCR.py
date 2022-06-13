@@ -29,9 +29,7 @@ dim_regulator = pd.read_pickle("data/ICA_PCA+Features+Y-OPEN.pkl")
 PCA_Y_CLOSED = PCA_Y_CLOSED.drop(PCA_Y_CLOSED.index.difference(dim_regulator.index))
 PCA_Y_OPEN = PCA_Y_OPEN.drop(PCA_Y_OPEN.index.difference(dim_regulator.index))
 Features_Y = Features_Y.drop(Features_Y.index.difference(dim_regulator.index))
-# print(PCA_Y_CLOSED.shape)
-# print(PCA_Y_OPEN.shape)
-# print(Features_Y.shape)
+
 
 open_eyes_pca = {
     "PCA+Y": PCA_Y_OPEN,
