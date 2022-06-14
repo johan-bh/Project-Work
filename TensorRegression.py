@@ -536,32 +536,22 @@ class Candemann_Parafac_module(nn.Module):
 # ----- Getting R-squared -----
 
 
-def R_squared(y_pred_vals, y_true_vals):
+def R_squared(test_preds, true_test, true_train):
+    (test_preds, true_test, true_values_train)
+    #mean_pred = sum(y_pred_vals)/len(y_pred_vals)
+    mean_true = sum(true_train) / len(true_train)
 
-    mean_pred = sum(y_pred_vals)/len(y_pred_vals)
-    mean_true = sum(y_true_vals) / len(y_true_vals)
+    MSE_top = 0
+    MSE_bottom = 0
 
-    MSE_pred = 0
-    MSE_true = 0
+    for i,j in zip(true_test,test_preds):
+        MSE_top += (i-j)**2
+    for i in true_test:
+        MSE_bottom += (i-mean_true)**2
 
-    for i in y_pred_vals:
-        MSE_pred += (i-mean_true)**2
-    for i in y_pred_vals:
-        MSE_true += (i-mean_true)**2
+    R2 = 1-(MSE_top)/(MSE_bottom)
 
-    R2 = 1-(MSE_pred)/(MSE_true)
-
-    return R2
-
-# ----- Getting Mean squared error -----
-def MSEfunc(y_pred_vals, y_true_vals):
-
-    differences = y_pred_vals-y_true_vals
-
-    deviation = sum(differences**2)/len(y_pred_val)
-
-
-    return deviation
+    return R2, MSE_top, MSE_bottom
 
 # ---------- MODEL TRAINING ----------
 
@@ -620,10 +610,9 @@ for test_type in tests:
         # zero the gradients after updating
         optimizer.zero_grad()
 
-    Final_R2 = R_squared(test_preds,true_values_train)
-    MeanSquarErr = MSEfunc(test_preds,true_test)
+    Final_R2, MSE_pred, MSE_true = R_squared(test_preds,true_test,true_values_train)
     print("For the " + test_type + " We get an R squared of " + str(Final_R2))
-    print("And for  " + test_type + " We get a mean squared error of  " + str(MeanSquarErr))
+    print("And for  " + test_type + " We get a mean squared error of  " + str(MSE_pred))
 print("Done")
 
 #  ---------- CURRENTLY UNUSED CODE  ----------
