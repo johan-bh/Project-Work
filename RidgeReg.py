@@ -7,7 +7,7 @@ import pickle
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-ica = False
+ica = True
 
 if ica == False:
     Features_Y = pd.read_pickle("data/Features+Y.pkl")
@@ -31,11 +31,11 @@ COHERENCE_FEATS_Y_OPEN = COHERENCE_FEATS_Y_OPEN.drop(COHERENCE_FEATS_Y_OPEN.inde
 COHERENCE_FEATS_Y_CLOSED = COHERENCE_FEATS_Y_CLOSED.drop(COHERENCE_FEATS_Y_CLOSED.index.difference(dim_regulator.index))
 Features_Y = Features_Y.drop(Features_Y.index.difference(dim_regulator.index))
 
-print(COHERENCE_Y_CLOSED.shape)
-print(COHERENCE_Y_OPEN.shape)
-print(COHERENCE_FEATS_Y_OPEN.shape)
-print(COHERENCE_FEATS_Y_CLOSED.shape)
-print(Features_Y.shape)
+# print(COHERENCE_Y_CLOSED.shape)
+# print(COHERENCE_Y_OPEN.shape)
+# print(COHERENCE_FEATS_Y_OPEN.shape)
+# print(COHERENCE_FEATS_Y_CLOSED.shape)
+# print(Features_Y.shape)
 
 # import warnings filter
 from warnings import simplefilter
@@ -130,27 +130,9 @@ def RidgeReg(key,data, eyes="closed"):
     r_squared = 1 - RSS / TSS
     scores["Y"] = r_squared
 
-    # ICA-flag file name
-    if ica == True:
-        ica_flag = "_ICA"
-    else:
-        ica_flag = ""
-
     # convert y_pred to numpy array
     y_test_est = np.array(y_pred)
     y_test = np.array(y_test)
-    axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
-    plt.plot(axis_range, axis_range, 'k--')
-    plt.plot(y_test, y_test_est, 'ob', alpha=.25)
-    plt.legend(['Perfect estimation', 'Model estimations'])
-    plt.title(f'Estimated versus true value (using the best alpha = {best_alpha})')
-    plt.suptitle(f'{key}')
-    plt.ylim(axis_range);
-    plt.xlim(axis_range)
-    plt.xlabel('True value')
-    plt.ylabel('Estimated value')
-    plt.grid()
-    plt.savefig(f'figures/Ridge_{key} ({eyes}){ica_flag}.png')
 
     # Compute relative error for X_test and y_test
     # y_pred = model.predict(X_test)
@@ -163,28 +145,56 @@ def RidgeReg(key,data, eyes="closed"):
     # relative_error = pd.DataFrame(relative_error, index=[f"Relative Error ({key})"]).T
     # # append relative error to scores
     # scores = pd.concat([scores, relative_error], axis=1)
-    return scores
+    return scores, y_test_est, y_test, best_alpha
+
+if ica == True:
+    ica_flag = "_ICA"
+else:
+    ica_flag = ""
+
 
 #loop through all_data and call RidgeReg function. Stack each dataframe column wise using the same index
-#and store the result in a new dataframe
+#and store the result in a new dataframe. + Store data for plotting in a list.
+plotting_data_closed = []
 ridge_scores_closed = pd.DataFrame()
 for key, data in closed_eyes_ridge.items():
-    scores = RidgeReg(key,data)
+    scores, y_test_est, y_test, best_alpha = RidgeReg(key,data)
     ridge_scores_closed = pd.concat([ridge_scores_closed, scores], axis=1)
+    axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
+    print(key)
+    if key == "COHERENCE+Y":
+        key = "Coherence"
+    if key == "COHERENCE+Features+Y":
+        key = "Coherence+Subject Info"
+    if key == "Features+Y":
+        key = "Subject Info"
+    print(key)
+    plotting_data_closed.append([key, y_test_est, y_test, axis_range])
+
 # rename the columns to "Coherence", "Coherence + Health" and "Health"
 ridge_scores_closed.columns = ["Coherence", "Coherence + Subject Info", "Subject Info"]
 # rename the last index of the dataframe to "All Response Variables"
 ridge_scores_closed.rename(index={"Y":"All Response Vars"}, inplace=True)
 
-
+plotting_data_open = []
 ridge_scores_open = pd.DataFrame()
 for key, data in open_eyes_ridge.items():
-    scores = RidgeReg(key,data, "open")
+    scores, y_test_est, y_test, best_alpha  = RidgeReg(key,data, "open")
     ridge_scores_open = pd.concat([ridge_scores_open, scores], axis=1)
+    axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
+    if key == "COHERENCE+Y":
+        key = "Coherence"
+    if key == "COHERENCE+Features+Y":
+        key = "Coherence+Subject Info"
+    if key == "Features+Y":
+        key = "Subject Info"
+    plotting_data_open.append([key, y_test_est, y_test, axis_range])
+
 # rename the columns to "Coherence", "Coherence + Health" and "Health"
 ridge_scores_open.columns = ["Coherence", "Coherence + Subject Info", "Subject Info"]
 # rename the last index of the dataframe to "All Response Vars"
 ridge_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
+
 
 # print the dataframes to latex
 print(ridge_scores_closed.to_latex(index=True))
@@ -201,3 +211,41 @@ else:
         pickle.dump(ridge_scores_closed, f)
     with open("data/ICA_Ridge_scores-open.pkl", 'wb') as f:
         pickle.dump(ridge_scores_open, f)
+
+# create figure with 3 subplots corresponding to the 3 different data sets
+fig, ax = plt.subplots(3, 1, figsize=(10, 10))
+for i, data in enumerate(plotting_data_closed):
+    key = data[0]
+    y_test_est = data[1]
+    y_test = data[2]
+    axis_range = data[3]
+    ax[i].plot(axis_range, axis_range, 'k--')
+    ax[i].plot(y_test, y_test_est, 'ob', alpha=.25)
+    ax[i].legend(['Perfect estimation', 'Model estimations'])
+    ax[i].title.set_text(f'Test Predictions (Input: Closed eyes, {key})')
+    ax[i].set_ylim(axis_range)
+    ax[i].set_xlim(axis_range)
+    ax[i].set_xlabel('True value')
+    ax[i].set_ylabel('Estimated value')
+    ax[i].grid(True)
+    plt.subplots_adjust(hspace=0.5)
+plt.savefig(f"figures/RidgePredictionPlotsClosed{ica_flag}.png")
+
+# create figure with 3 subplots corresponding to the 3 different data sets
+fig, ax = plt.subplots(3, 1, figsize=(10, 10))
+for i, data in enumerate(plotting_data_open):
+    key = data[0]
+    y_test_est = data[1]
+    y_test = data[2]
+    axis_range = data[3]
+    ax[i].plot(axis_range, axis_range, 'k--')
+    ax[i].plot(y_test, y_test_est, 'ob', alpha=.25)
+    ax[i].legend(['Perfect estimation', 'Model estimations'])
+    ax[i].title.set_text(f'Test Predictions (Input: Open eyes, {key})')
+    ax[i].set_ylim(axis_range)
+    ax[i].set_xlim(axis_range)
+    ax[i].set_xlabel('True value')
+    ax[i].set_ylabel('Estimated value')
+    ax[i].grid(True)
+    plt.subplots_adjust(hspace=0.5)
+plt.savefig(f"figures/RidgePredictionPlotsOpen{ica_flag}.png")
