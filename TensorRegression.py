@@ -26,36 +26,10 @@ with open('data/response_var_df.pkl', 'rb') as f:
     response_var_df = pickle.load(f)
 response_variables = response_var_df.to_dict('dict')
 
-
-"""
 keys = list()
 for key,value in data.items(): #Convert every coherence map into a tensor with key in keys
     data[key] = torch.tensor(value)
     keys.append(key)
-"""
-
-keys = list()
-for key,value in data.items(): #Convert every coherence map into a tensor with key in keys
-    data[key] = torch.tensor(value)
-    keys.append(key)
-
-
-
-
-#  ---------- DEFINING OUR ADAM OPTIMIZER  ----------
-
-class Regress_Loss(torch.nn.Module):
-
-    def __init__(self):
-        super(Regress_Loss, self).__init__()
-
-    def forward(self, x, y):
-        y_shape = y.size()[1]
-        x_added_dim = x.unsqueeze(1)
-        x_stacked_along_dimension1 = x_added_dim.repeat(1, NUM_WORDS, 1)
-        diff = torch.sum((y - x_stacked_along_dimension1) ** 2, 2)
-        totloss = torch.sum(torch.sum(torch.sum(diff)))
-        return totloss
 
 
 #  ---------- IMPLEMENTATION OF TENSOR REGRESSION  ----------
@@ -84,17 +58,13 @@ print(f'#samples: {n_samples}, #features: {n_features}')
 # 0) create a test sample
 X_test = torch.tensor([5], dtype=torch.float32)
 
-# 1) Design Model, the model has to implement the forward pass!
-# Here we can use a built-in model from PyTorch
-input_size = n_features
-output_size = n_features
-
-
+# Here we design the model, this has to be done in order
+# to specify our own cost function and cost function parameters.
 
 class Whatiwant(nn.Module):
     def __init__(self, rank=1):
         """
-        In the constructor we instantiate four parameters and assign them as
+        In the constructor we instantiate 71*rank parameters and assign them as
         member parameters.
         """
         super().__init__()
@@ -559,7 +529,7 @@ class Whatiwant(nn.Module):
             self.CP["alpha2"]["a262"] = self.a262
             self.CP["alpha2"]["a263"] = self.a263
 
-    def forward(self, x):
+    def forward(self, x):#Forward pass function
         """
         In the forward function we accept a Tensor of input data and we must return
         a Tensor of output data. We can use Modules defined in the constructor as
@@ -575,33 +545,45 @@ class Whatiwant(nn.Module):
                         CPd_sum = 0
 
                         for d in range(self.rank):
-                            CPd_sum += self.CP["alpha" + str(d)][i]
 
-                            CPd_sum += self.CP["alpha" + str(d)][i] * self.CP["alpha" + str(d)][i] * \
-                                       self.CP_dict["gamma" + str(d)][j]
+                            CPd_sum += self.CP["alpha" + str(d)]["a"+str(d)+str(i)] * self.CP["alpha" + str(d)]["a"+str(d)+str(i)] * self.CP["gamma" + str(d)]["g"+str(d)+str(k)]
 
-                        finalsum += x[i][j][k] * CPd_sum
+                        finalsum += x[k][i][j] * CPd_sum
 
         return self.beta_0 + finalsum
 
 
+#Model training
+
+""" To look at
+data = pd.read_pickle("data/tensor_data_open.pkl")
+
+with open('data/response_var_df.pkl', 'rb') as f:
+    response_var_df = pickle.load(f)
+response_variables = response_var_df.to_dict('dict')
+
+keys = list()
+for key,value in data.items(): #Convert every coherence map into a tensor with key in keys
+    data[key] = torch.tensor(value)
+    keys.append(key)
+"""
+
 model = Whatiwant(rank=1)
 
-print(f'Prediction before training: f(5) = {model(X_test).item():.3f}')
 # 2) Define loss and optimizer
 learning_rate = 0.01
-n_iters = 100
+n_iters = 250
 
 loss = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-# 3) Training loop
+# 3) Training loop for MMSE
 for epoch in range(n_iters):
     # predict = forward pass with our model
-    y_predicted = model(X)
+    y_predicted = model(data[keys[epoch]])
 
     # loss
-    l = loss(Y, y_predicted)
+    l = loss(torch.tensor(response_variables["MMSE"][keys[300]], dtype=torch.float64), y_predicted)
 
     # calculate gradients = backward pass
     l.backward()
@@ -612,13 +594,25 @@ for epoch in range(n_iters):
     # zero the gradients after updating
     optimizer.zero_grad()
 
-print(f'Prediction after training: f(5) = {model(X_test).item():.3f}')
 
-what = 3
+for epoch in range():
+    # predict = forward pass with our model
+    y_predicted = model(data[keys[epoch]])
 
-#print(Cost_Function(Xn = x, Yn = 29, rank=2, CP=CP))
+    # loss
+    l = loss(torch.tensor(response_variables["MMSE"][keys[300]], dtype=torch.float64), y_predicted)
 
-# --- Adam optimization ---
+    # calculate gradients = backward pass
+    l.backward()
+
+    # update weights
+    optimizer.step()
+
+    # zero the gradients after updating
+    optimizer.zero_grad()
+
+
+#  ---------- CURRENTLY UNUSED CODE  ----------
 
 
 """
@@ -680,11 +674,21 @@ if __name__ == '__main__':
     # Process is complete.
     print('Training process has finished.')
 
+
+
+class Regress_Loss(torch.nn.Module):
+
+    def __init__(self):
+        super(Regress_Loss, self).__init__()
+
+    def forward(self, x, y):
+        y_shape = y.size()[1]
+        x_added_dim = x.unsqueeze(1)
+        x_stacked_along_dimension1 = x_added_dim.repeat(1, NUM_WORDS, 1)
+        diff = torch.sum((y - x_stacked_along_dimension1) ** 2, 2)
+        totloss = torch.sum(torch.sum(torch.sum(diff)))
+        return totloss
 """
-#  ---------- CURRENTLY UNUSED CODE  ----------
-
-
-
 
 """
 if __name__ == '__main__':
