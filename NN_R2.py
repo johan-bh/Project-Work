@@ -15,8 +15,14 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-ica = True
+#Initialize output choices
+ica = False
+plot_learning_curve = False
+plot_model_pred_test = True
+plot_model_pred_train = False
+print_latex = True
 
+#Initialize if input datahas been preprocessed with or without ICA
 if ica == False:
     # Load all data combinations
     PCA_Y_CLOSED = pd.read_pickle("data/PCA+Y-CLOSED.pkl") # (328, 56)
@@ -41,13 +47,13 @@ PCA_FEATS_Y_CLOSED = PCA_FEATS_Y_CLOSED.drop(PCA_FEATS_Y_CLOSED.index.difference
 PCA_FEATS_Y_OPEN = PCA_FEATS_Y_OPEN.drop(PCA_FEATS_Y_OPEN.index.difference(dim_regulator.index))
 
 open_eyes_pca = {
-    "PCA+Y": PCA_Y_OPEN,
-    "PCA+Features+Y": PCA_FEATS_Y_OPEN,
-    "Features+Y": Features_Y}
+    "PCA": PCA_Y_OPEN,
+    "PCA+Subj_Info": PCA_FEATS_Y_OPEN,
+    "Subj_Info": Features_Y}
 closed_eyes_pca = {
-    "PCA+Y": PCA_Y_CLOSED,
-    "PCA+Features+Y": PCA_FEATS_Y_CLOSED,
-    "Features+Y": Features_Y}
+    "PCA": PCA_Y_CLOSED,
+    "PCA+Subj_Info": PCA_FEATS_Y_CLOSED,
+    "Subj_info": Features_Y}
 
 
 
@@ -57,16 +63,17 @@ def NeuralNetwork(key,data):
     X = X.iloc[:, :-6]
     X = X.to_numpy()
     y = y.to_numpy()
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=30)
   
     
     N, M = X.shape
     
     # Parameters for neural network classifier
-    n_hidden_units1 = round(M*(2/3))+6#round((1/2*M)+6)
-    n_hidden_units2 = round(n_hidden_units1*(2/3))+6      # number of hidden units
+    n_hidden_units1 = round((2/3*M)+6)
+    #n_hidden_units2 = round(n_hidden_units1*(2/3))+6      # number of hidden units
     n_replicates = 10       # number of networks trained in each k-fold
-    max_iter = 200
+    max_iter = 10000
+
     
 
     
@@ -74,9 +81,9 @@ def NeuralNetwork(key,data):
     model = lambda: torch.nn.Sequential(
                         torch.nn.Linear(M, n_hidden_units1), #M features to n_hidden_units
                         torch.nn.ReLU(),   # 1st transfer function,
-                        torch.nn.Linear(n_hidden_units1, n_hidden_units2), #M features to n_hidden_units
-                        torch.nn.ReLU(),   # 1st transfer function,
-                        torch.nn.Linear(n_hidden_units2, 6), # n_hidden_units to 4 output neuron
+                        #torch.nn.Linear(n_hidden_units1, n_hidden_units2), #M features to n_hidden_units
+                        #torch.nn.ReLU(),   # 1st transfer function,
+                        torch.nn.Linear(n_hidden_units1, 6), # n_hidden_units to 4 output neuron
                         # no final tranfer function, i.e. "linear output"
                         )
     loss_fn = torch.nn.MSELoss() # notice how this is now a mean-squared-error loss
@@ -93,18 +100,15 @@ def NeuralNetwork(key,data):
     y_train_mean = sum(y_train)/len(y_train)
     y_train_std=y_train.std(axis=0)
     y_train=(y_train-y_train_mean)/y_train_std
-   
-    y_test_mean = sum(y_test)/len(y_test)
-    y_test_std=y_test.std(axis=0)
-    y_test=(y_test-y_test_mean)/y_test_std
+    y_test=(y_test-y_train_mean)/y_train_std
 
-    """
+    
     #Standardization of inputs, so that ADAM learns faster
     X_train_mean = sum(X_train)/len(X_train)
     X_std=X_train.std(axis=0)
     X_train=(X_train-X_train_mean)/X_std
     X_test=(X_test-X_train_mean)/X_std
-    """
+    
     
     net, final_loss, learning_curve = train_neural_net(model,
                                                        loss_fn,
@@ -139,76 +143,173 @@ def NeuralNetwork(key,data):
     #np_errors=np.append(np_errors, )
 
         
-    return testError, trainError, y_test, y_test_est, y_train, y_train_est
+    return testError, trainError, y_test, y_test_est, y_train, y_train_est, learning_curve
 
-    
+
 # run the NN for all inputs with closed eyes, and R-squared for test and train error in two dfferent matrices
 pca_scores_closed = pd.DataFrame()
 pca_scores_closed_train = pd.DataFrame()
+
 for key, data in closed_eyes_pca.items():
-    errors, trainErrors, y_test, y_test_est, y_train, y_train_est = NeuralNetwork(key,data)
+    errors, trainErrors, y_test, y_test_est, y_train, y_train_est, learning_curve = NeuralNetwork(key,data)
     errors = np.append(errors, np.mean(errors))
     pca_scores_closed=pd.concat([pca_scores_closed, pd.DataFrame(errors)], axis=1)
     trainErrors = np.append(trainErrors, np.mean(trainErrors))
     pca_scores_closed_train=pd.concat([pca_scores_closed_train, pd.DataFrame(trainErrors)], axis=1)
-    #plotting the training model
+    
+    #chaning to numpy arrays for plots
     y_train=y_train.data.numpy()
     y_train_est=y_train_est.data.numpy()
-    axis_range = [np.min([y_train_est, y_train])-1,np.max([y_train_est, y_train])+1]
-    plt.plot(axis_range,axis_range,'k--')
-    plt.plot(y_train, y_train_est,'ob',alpha=.25)
-    plt.legend(['Perfect estimation','Model estimations'])
-    plt.title('Estimated versus true value (for last CV-fold)')
-    plt.ylim(axis_range); plt.xlim(axis_range)
-    plt.xlabel('True value')
-    plt.ylabel('Estimated value')
-    plt.grid()
-
-    plt.show()
     y_test=y_test.data.numpy()
     y_test_est=y_test_est.data.numpy()
-    axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
-    plt.plot(axis_range,axis_range,'k--')
-    plt.plot(y_test, y_test_est,'ob',alpha=.25)
-    plt.legend(['Perfect estimation','Model estimations'])
-    plt.title('Estimated versus true value (for last CV-fold)')
-    plt.ylim(axis_range); plt.xlim(axis_range)
-    plt.xlabel('True value')
-    plt.ylabel('Estimated value')
-    plt.grid()
-
-    plt.show()
+    
+    if plot_learning_curve == True:
+        #plotting the learning curve
+        plt.ylim([0, 1])
+        plt.plot(learning_curve, color='tab:orange')
+        plt.xlabel('Iterations')
+        plt.ylabel('Loss')
+        plt.title(f'Learning curve: {key}, closed eyes')
+        plt.grid()
+        plt.show()
+    
+    if plot_model_pred_test == True:
+        #plotting the test model
+        axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
+        plt.plot(axis_range,axis_range,'k--')
+        plt.plot(y_test, y_test_est,'ob',alpha=.25)
+        plt.legend(['Perfect estimation','Model estimations'])
+        plt.title(f'Test predictions (Input: Closed eyes, {key})')
+        plt.ylim([-4,4]); plt.xlim([-4,4])
+        plt.xlabel('True value')
+        plt.ylabel('Estimated value')
+        plt.grid()
+        plt.show()
+        
+    if plot_model_pred_train == True:
+        #plotting the training model
+        axis_range = [np.min([y_train_est, y_train])-1,np.max([y_train_est, y_train])+1]
+        plt.plot(axis_range,axis_range,'k--')
+        plt.plot(y_train, y_train_est,'ob',alpha=.25)
+        plt.legend(['Perfect estimation','Model estimations'])
+        plt.title(f'Training predictions (Input: Closed eyes, {key})')
+        plt.ylim([-4,4]); plt.xlim([-4,4])
+        plt.xlabel('True value')
+        plt.ylabel('Estimated value')
+        plt.grid()
+        plt.show()
+    
 
 # rename columns of dataframe
 pca_scores_closed.columns = ["PCA", "PCA + Subj_Info", "Subj_Info"]
+pca_scores_closed_train.columns = ["PCA", "PCA + Subj_Info", "Subj_Info"]
 # rename index of the dataframe
 pca_scores_closed.index = ["MMSE", "ACE", "TMT A", "TMT B", "DigitSymbol", "Retention", "All"]
-
+pca_scores_closed_train.index = ["MMSE", "ACE", "TMT A", "TMT B", "DigitSymbol", "Retention", "All"]
 
 # run the NN for all inputs with open eyes, and R-squared for test and train error in two dfferent matrices
 pca_scores_open = pd.DataFrame()
 pca_scores_open_train = pd.DataFrame()
 for key, data in open_eyes_pca.items():
-    errors, trainErrors, y_test, y_test_est, y_train, y_train_est = NeuralNetwork(key,data)
+    errors, trainErrors, y_test, y_test_est, y_train, y_train_est, learning_curve = NeuralNetwork(key,data)
     errors = np.append(errors, np.mean(errors))
     pca_scores_open=pd.concat([pca_scores_open, pd.DataFrame(errors)], axis=1)
     trainErrors = np.append(trainErrors, np.mean(trainErrors))
     pca_scores_open_train=pd.concat([pca_scores_open_train, pd.DataFrame(trainErrors)], axis=1)
+    
+    #chaning to numpy arrays for plots
+    y_train=y_train.data.numpy()
+    y_train_est=y_train_est.data.numpy()
+    y_test=y_test.data.numpy()
+    y_test_est=y_test_est.data.numpy()
+    
+    if plot_learning_curve == True:
+        #plotting the learning curve
+        plt.ylim([0, 1])
+        plt.plot(learning_curve, color='tab:orange')
+        plt.xlabel('Iterations')
+        plt.ylabel('Loss')
+        plt.title(f'Learning curve: {key}, closed eyes')
+        plt.grid()
+        plt.show()
+    
+    if plot_model_pred_test == True:
+        #plotting the test model
+        axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
+        plt.plot(axis_range,axis_range,'k--')
+        plt.plot(y_test, y_test_est,'ob',alpha=.25)
+        plt.legend(['Perfect estimation','Model estimations'])
+        plt.title(f'Test predictions (Input: Open eyes, {key})')
+        plt.ylim([-4,4]); plt.xlim([-4,4])
+        plt.xlabel('True value')
+        plt.ylabel('Estimated value')
+        plt.grid()
+        plt.show()
+        
+    if plot_model_pred_train == True:
+        #plotting the training model
+        axis_range = [np.min([y_train_est, y_train])-1,np.max([y_train_est, y_train])+1]
+        plt.plot(axis_range,axis_range,'k--')
+        plt.plot(y_train, y_train_est,'ob',alpha=.25)
+        plt.legend(['Perfect estimation','Model estimations'])
+        plt.title(f'Training predictions (Input: Open eyes, {key})')
+        plt.ylim([-4,4]); plt.xlim([-4,4])
+        plt.xlabel('True value')
+        plt.ylabel('Estimated value')
+        plt.grid()
+        plt.show()
+    
+    
 
 # rename the columns of dataframe
 pca_scores_open.columns = ["PCA", "PCA + Subj_Info", "Subj_Info"]
+pca_scores_open_train.columns = ["PCA", "PCA + Subj_Info", "Subj_Info"]
 # rename index of the dataframe
 pca_scores_open.index = ["MMSE", "ACE", "TMT A", "TMT B", "DigitSymbol", "Retention", "All"]
+pca_scores_open_train.index = ["MMSE", "ACE", "TMT A", "TMT B", "DigitSymbol", "Retention", "All"]
 
 
-# print the dataframes to latex
-print(pca_scores_closed.to_latex(index=True))
-print(pca_scores_closed_train)
-print(pca_scores_open.to_latex(index=True))
-print(pca_scores_open_train)
+
+# print the dataframes
+if print_latex==True: #print in latex format
+    print('Closed eyes R-square test scores')
+    print(pca_scores_closed.to_latex(index=True))
+    print('Closed eyes R-square train scores')
+    print(pca_scores_closed_train.to_latex(index=True))
+    print('Open eyes R-square test scores')
+    print(pca_scores_open.to_latex(index=True))
+    print('Open eyes R-square train scores')
+    print(pca_scores_open_train.to_latex(index=True))
+    
+else:
+    print('Closed eyes R-square test scores')
+    print(pca_scores_closed)
+    print('Closed eyes R-square train scores')
+    print(pca_scores_closed_train)
+    print('Open eyes R-square test scores')
+    print(pca_scores_open)
+    print('Open eyes R-square train scores')
+    print(pca_scores_open_train)
+        
+
+
         
 """
+color_list = ['tab:orange', 'tab:green', 'tab:purple']
+labels = ['PCA', 'PCA+Subj_info', 'Subj_info']
+for i,j in range(3):
 
+    plt.plot(y_test_true[i], y_test_pred[i],'ob',alpha=.5, color=color_list[i], label=labels[i])
+
+axis_range = [np.min([y_test_pred, y_test_true])-1,np.max([y_test_pred, y_test_true])+1]
+plt.plot(axis_range,axis_range,'k--')
+plt.title(f'Estimated versus true value, test data; {key}')
+plt.xlabel('True value')
+plt.ylabel('Estimated value')
+plt.grid()
+plt.legend()
+
+plt.show()
         
     pca_scores_closed = pd.concat([pca_scores_closed, scores], axis=1)
 # rename the columns to "PCA", "PCA + Health" and "Health"
