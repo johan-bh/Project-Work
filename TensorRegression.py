@@ -3,7 +3,7 @@
 
 #Torch imports
 import torch
-import torch as nn
+import torch.nn as nn
 import torch.optim as optim
 torch.manual_seed(0)
 
@@ -13,13 +13,16 @@ from sklearn.model_selection import train_test_split
 #Basic dataframe imports
 import numpy as np
 import pandas as pd
+import random
 import pickle
 
 #Plotting imports
 import matplotlib.pyplot as plt
 
 
-#  ---------- COHERENCE AND RESPONSE VARIABLE IMPORT AND HANDLING ----------
+#  ---------- COHERENCE MAP AND RESPONSE VARIABLE LOAD AND HANDLING ----------
+
+
 data = pd.read_pickle("data/tensor_data_open.pkl")
 
 with open('data/response_var_df.pkl', 'rb') as f:
@@ -32,36 +35,9 @@ for key,value in data.items(): #Convert every coherence map into a tensor with k
     keys.append(key)
 
 
-#  ---------- IMPLEMENTATION OF TENSOR REGRESSION  ----------
-# --- CP function ---
-# 1) Design model (input, output, forward pass with different layers)
-# 2) Construct loss and optimizer
-# 3) Training loop
-#       - Forward = compute prediction and loss
-#       - Backward = compute gradients
-#       - Update weights
+#  ---------- IMPLEMENTATION OF TENSOR REGRESSION WITH ADAM OPTIMIZER  ----------
 
-import torch
-import torch.nn as nn
-
-# Linear regression
-# f = w * x
-
-# here : f = 2 * x
-
-# 0) Training samples, watch the shape!
-X = torch.tensor([[1], [2], [3], [4]], dtype=torch.float32)
-Y = torch.tensor([[2], [4], [6], [8]], dtype=torch.float32)
-
-n_samples, n_features = X.shape
-print(f'#samples: {n_samples}, #features: {n_features}')
-# 0) create a test sample
-X_test = torch.tensor([5], dtype=torch.float32)
-
-# Here we design the model, this has to be done in order
-# to specify our own cost function and cost function parameters.
-
-class Whatiwant(nn.Module):
+class Candemann_Parafac_module(nn.Module):
     def __init__(self, rank=1):
         """
         In the constructor we instantiate 71*rank parameters and assign them as
@@ -73,8 +49,10 @@ class Whatiwant(nn.Module):
         self.beta_0 = torch.nn.Parameter(torch.randn(()))
         self.CP = {}
 
-        # Here we define our torch parameters, which is our CP variables. I ended up having to do this as each variable on at a time
-        # because i couldn't find a way to set a string in as the name for a variable, and torch didn't accept dictionaries.
+        # Here we define our torch parameters, which is our CP variables.
+        # I ended up having to do this as each variable on at a time
+        # because i couldn't find a way to set a string in as the name for a variable,
+        # and torch didn't accept dictionaries.
 
         if self.rank < 2:
             self.g00 = torch.nn.Parameter(torch.randn(()))
@@ -536,6 +514,8 @@ class Whatiwant(nn.Module):
         well as arbitrary operators on Tensors.
         """
 
+        # HERE WE PREDICT OUR Y VALUE USING CANDEMANN-PARAFAC INFRASTRUCTURE
+
         finalsum = 0
 
         for k in range(7):
@@ -546,76 +526,128 @@ class Whatiwant(nn.Module):
 
                         for d in range(self.rank):
 
-                            CPd_sum += self.CP["alpha" + str(d)]["a"+str(d)+str(i)] * self.CP["alpha" + str(d)]["a"+str(d)+str(i)] * self.CP["gamma" + str(d)]["g"+str(d)+str(k)]
+                            CPd_sum += self.CP["alpha" + str(d)]["a"+str(d)+str(i)] \
+                                       * self.CP["alpha" + str(d)]["a"+str(d)+str(i)] \
+                                       * self.CP["gamma" + str(d)]["g"+str(d)+str(k)]
 
                         finalsum += x[k][i][j] * CPd_sum
 
         return self.beta_0 + finalsum
+#Getting R-squared
 
 
-#Model training
+def R_squared(y_pred_vals, y_true_vals):
 
-""" To look at
-data = pd.read_pickle("data/tensor_data_open.pkl")
+    mean_pred = sum(y_pred_vals)/len(y_pred_vals)
+    mean_true = sum(y_true_vals) / len(y_true_vals)
 
-with open('data/response_var_df.pkl', 'rb') as f:
-    response_var_df = pickle.load(f)
-response_variables = response_var_df.to_dict('dict')
+    MSE_pred = 0
+    MSE_true = 0
 
-keys = list()
-for key,value in data.items(): #Convert every coherence map into a tensor with key in keys
-    data[key] = torch.tensor(value)
-    keys.append(key)
-"""
+    for i in y_pred_vals:
+        MSE_pred += (i-mean_pred)**2
 
-model = Whatiwant(rank=1)
-
-# 2) Define loss and optimizer
-learning_rate = 0.01
-n_iters = 250
-
-loss = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-# 3) Training loop for MMSE
-for epoch in range(n_iters):
-    # predict = forward pass with our model
-    y_predicted = model(data[keys[epoch]])
-
-    # loss
-    l = loss(torch.tensor(response_variables["MMSE"][keys[300]], dtype=torch.float64), y_predicted)
-
-    # calculate gradients = backward pass
-    l.backward()
-
-    # update weights
-    optimizer.step()
-
-    # zero the gradients after updating
-    optimizer.zero_grad()
+    for i in y_true_vals:
+        MSE_true += (i-mean_true)**2
 
 
-for epoch in range():
-    # predict = forward pass with our model
-    y_predicted = model(data[keys[epoch]])
+    R2 = 1-(MSE_pred)/(MSE_true)
 
-    # loss
-    l = loss(torch.tensor(response_variables["MMSE"][keys[300]], dtype=torch.float64), y_predicted)
+    return R2
 
-    # calculate gradients = backward pass
-    l.backward()
+# ---------- MODEL TRAINING ----------
 
-    # update weights
-    optimizer.step()
+tests = list(response_variables.keys())
 
-    # zero the gradients after updating
-    optimizer.zero_grad()
+#train_keys, test_keys = train_test_split(keys, test_size=0.33, random_state=42)
+
+random.seed(420)
+
+random.shuffle(keys)
+
+for test_type in tests:
+    model = Candemann_Parafac_module(rank=1)
+
+    # 2) Define loss and optimizer
+    learning_rate = 0.01
+    n_iters = len(data)
+    train_stop = 250
+
+    loss = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+
+    train_preds = []
+    true_values_pred = []
+    test_preds = []
+
+    for epoch in range(n_iters):
+        # predict = forward pass with our model
+        y_predicted = model(data[keys[epoch]])
+
+
+        # loss
+        try:
+            l = loss(torch.tensor(response_variables[test_type][keys[epoch]], dtype=torch.float64), y_predicted)
+        except:
+            continue
+        #summ += response_variables[test_type][keys[epoch]]
+
+        #Values for R squared
+        if epoch < train_stop:
+            train_preds.append(y_predicted)
+            true_values_pred.append(response_variables[test_type][keys[epoch]])
+        else:
+            test_preds.append(y_predicted)
+
+        # calculate gradients = backward pass
+        l.backward()
+
+        # update weights
+        optimizer.step()
+
+        # zero the gradients after updating
+        optimizer.zero_grad()
+
+    Final_R2 = R_squared(test_preds,)
+    prints("For the " + test_type + "We get an R squared of " + str(FinalR2))
+
+
+
+
+
+
+
+
+
+    print(test_type)
+
+# ----- R squared -----
+
 
 
 #  ---------- CURRENTLY UNUSED CODE  ----------
 
 
 """
+
+# Linear regression
+# f = w * x
+
+# here : f = 2 * x
+
+# 0) Training samples, watch the shape!
+X = torch.tensor([[1], [2], [3], [4]], dtype=torch.float32)
+Y = torch.tensor([[2], [4], [6], [8]], dtype=torch.float32)
+
+n_samples, n_features = X.shape
+print(f'#samples: {n_samples}, #features: {n_features}')
+# 0) create a test sample
+X_test = torch.tensor([5], dtype=torch.float32)
+
+# Here we design the model, this has to be done in order
+# to specify our own cost function and cost function parameters.
+
 if __name__ == '__main__':
 
     torch.manual_seed(42)
