@@ -11,7 +11,7 @@ import os
 
 activate_plots = False
 tensor_regression = True
-run_ICA = False
+run_ICA = True
 mne.utils.set_config('MNE_USE_CUDA', 'true')  # Use GPU for ICA etc.
 # Check if GPU is available. n_jobs = 1 (CPU) n_jobs = "cuda" (GPU). n_jobs is a param for filter functions etc.
 if mne.utils.get_config('MNE_USE_CUDA') == 'true':
