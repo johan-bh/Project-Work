@@ -546,10 +546,8 @@ def R_squared(y_pred_vals, y_true_vals):
 
     for i in y_pred_vals:
         MSE_pred += (i-mean_pred)**2
-
-    for i in y_true_vals:
+    for i in y_pred_vals:
         MSE_true += (i-mean_true)**2
-
 
     R2 = 1-(MSE_pred)/(MSE_true)
 
@@ -611,13 +609,9 @@ for test_type in tests:
         optimizer.zero_grad()
 
     Final_R2 = R_squared(test_preds,true_values_pred)
-    print("For the " + test_type + "We get an R squared of " + str(FinalR2))
+    print("For the " + test_type + " We get an R squared of " + str(Final_R2))
 
 print("Done")
-
-# ----- R squared -----
-
-
 
 #  ---------- CURRENTLY UNUSED CODE  ----------
 
