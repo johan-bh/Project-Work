@@ -103,7 +103,7 @@ def train_neural_net(model, loss_fn, X, y,
         
         # A more complicated optimizer is the Adam-algortihm, which is an extension
         # of SGD to adaptively change the learing rate, which is widely used:
-        optimizer = torch.optim.Adam(net.parameters())
+        optimizer = torch.optim.Adam(net.parameters(), weight_decay=0.01)
         
         # Train the network while displaying and storing the loss
         #print('\t\t{}\t{}\t\t\t{}'.format('Iter', 'Loss','Rel. loss'))
