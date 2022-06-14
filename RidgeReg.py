@@ -6,7 +6,8 @@ import pickle
 # import timer for timing the code
 import time
 import numpy as np
-ica = True
+import matplotlib.pyplot as plt
+ica = False
 
 if ica == False:
     Features_Y = pd.read_pickle("data/Features+Y.pkl")
@@ -50,7 +51,7 @@ open_eyes_ridge = {
     "COHERENCE+Features+Y": COHERENCE_FEATS_Y_OPEN,
     "Features+Y": Features_Y}
 
-def RidgeReg(key,data):
+def RidgeReg(key,data, eyes="closed"):
     """This function takes a dataframe and computes ridge regression.
     It uses the last 6 columns seperately as targets, and then the last 6 columns together as a target.
     The score of each model is stored in a dictionary."""
@@ -99,6 +100,8 @@ def RidgeReg(key,data):
         # relative_error[col] = np.mean(np.abs(y_test - model.predict(X_test)) / (y_test + 1e-10))
 
 
+
+
     # Get R-squared (all response vars)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     if "Feature" in key:
@@ -109,8 +112,8 @@ def RidgeReg(key,data):
         X_train = (X_train - X_train_mean) / X_train_std
         # Use X_train_mean and X_train_std to standardize X_test
         X_test = (X_test - X_train_mean) / X_train_std
-    best_score = 0
-    best_alpha = 0
+    best_score = -100
+    best_alpha = -100
     # loop through different values of alpha and find the best one and use it
     for alpha in [0.001, 0.01, 0.1, 1, 10, 100]:
         model = Ridge(alpha=alpha)
@@ -126,6 +129,29 @@ def RidgeReg(key,data):
     RSS = np.mean(np.sum((y_test - y_pred) ** 2))
     r_squared = 1 - RSS / TSS
     scores["Y"] = r_squared
+
+    # ICA-flag file name
+    if ica == True:
+        ica_flag = "_ICA"
+    else:
+        ica_flag = ""
+
+    # convert y_pred to numpy array
+    y_test_est = np.array(y_pred)
+    y_test = np.array(y_test)
+    axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
+    plt.plot(axis_range, axis_range, 'k--')
+    plt.plot(y_test, y_test_est, 'ob', alpha=.25)
+    plt.legend(['Perfect estimation', 'Model estimations'])
+    plt.title(f'Estimated versus true value (using the best alpha = {best_alpha})')
+    plt.suptitle(f'{key}')
+    plt.ylim(axis_range);
+    plt.xlim(axis_range)
+    plt.xlabel('True value')
+    plt.ylabel('Estimated value')
+    plt.grid()
+    plt.savefig(f'figures/Ridge_{key} ({eyes}){ica_flag}.png')
+
     # Compute relative error for X_test and y_test
     # y_pred = model.predict(X_test)
     # compute relative error between the matrix y_pred and the matrix y_test
@@ -153,7 +179,7 @@ ridge_scores_closed.rename(index={"Y":"All Response Vars"}, inplace=True)
 
 ridge_scores_open = pd.DataFrame()
 for key, data in open_eyes_ridge.items():
-    scores = RidgeReg(key,data)
+    scores = RidgeReg(key,data, "open")
     ridge_scores_open = pd.concat([ridge_scores_open, scores], axis=1)
 # rename the columns to "Coherence", "Coherence + Health" and "Health"
 ridge_scores_open.columns = ["Coherence", "Coherence + Subject Info", "Subject Info"]
@@ -166,8 +192,12 @@ print(ridge_scores_open.to_latex(index=True))
 
 if ica == False:
     # save the dataframes to pickle files
-    ridge_scores_closed.to_pickle("data/Ridge_scores-closed.pkl")
-    ridge_scores_open.to_pickle("data/Ridge_scores-open.pkl")
+    with open("data/Ridge_scores-open.pkl", 'wb') as f:
+        pickle.dump(ridge_scores_closed, f)
+    with open("data/Ridge_scores-open.pkl", 'wb') as f:
+        pickle.dump(ridge_scores_open, f)
 else:
-    ridge_scores_closed.to_pickle("data/ICA_Ridge_scores-closed.pkl")
-    ridge_scores_open.to_pickle("data/ICA_Ridge_scores-open.pkl")
+    with open("data/ICA_Ridge_scores-closed.pkl", 'wb') as f:
+        pickle.dump(ridge_scores_closed, f)
+    with open("data/ICA_Ridge_scores-open.pkl", 'wb') as f:
+        pickle.dump(ridge_scores_open, f)
