@@ -533,7 +533,7 @@ class Candemann_Parafac_module(nn.Module):
                         finalsum += x[k][i][j] * CPd_sum
 
         return self.beta_0 + finalsum
-#Getting R-squared
+# ----- Getting R-squared -----
 
 
 def R_squared(y_pred_vals, y_true_vals):
@@ -545,13 +545,23 @@ def R_squared(y_pred_vals, y_true_vals):
     MSE_true = 0
 
     for i in y_pred_vals:
-        MSE_pred += (i-mean_pred)**2
+        MSE_pred += (i-mean_true)**2
     for i in y_pred_vals:
         MSE_true += (i-mean_true)**2
 
     R2 = 1-(MSE_pred)/(MSE_true)
 
     return R2
+
+# ----- Getting Mean squared error -----
+def MSEfunc(y_pred_vals, y_true_vals):
+
+    differences = y_pred_vals-y_true_vals
+
+    deviation = sum(differences**2)/len(y_pred_val)
+
+
+    return deviation
 
 # ---------- MODEL TRAINING ----------
 
@@ -576,8 +586,9 @@ for test_type in tests:
 
 
     train_preds = []
-    true_values_pred = []
+    true_values_train = []
     test_preds = []
+    true_test = []
 
     for epoch in range(n_iters):
         print(test_type + " : " + str(epoch))
@@ -595,9 +606,10 @@ for test_type in tests:
         #Values for R squared
         if epoch < train_stop:
             train_preds.append(y_predicted)
-            true_values_pred.append(response_variables[test_type][keys[epoch]])
+            true_values_train.append(response_variables[test_type][keys[epoch]])
         else:
             test_preds.append(y_predicted)
+            true_test.append(response_variables[test_type][keys[epoch]])
 
         # calculate gradients = backward pass
         l.backward()
@@ -608,9 +620,10 @@ for test_type in tests:
         # zero the gradients after updating
         optimizer.zero_grad()
 
-    Final_R2 = R_squared(test_preds,true_values_pred)
+    Final_R2 = R_squared(test_preds,true_values_train)
+    MeanSquarErr = MSEfunc(test_preds,true_test)
     print("For the " + test_type + " We get an R squared of " + str(Final_R2))
-
+    print("And for  " + test_type + " We get a mean squared error of  " + str(MeanSquarErr))
 print("Done")
 
 #  ---------- CURRENTLY UNUSED CODE  ----------
