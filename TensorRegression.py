@@ -582,6 +582,7 @@ for test_type in tests:
     test_preds = []
 
     for epoch in range(n_iters):
+        print(test_type + " : " + str(epoch))
         # predict = forward pass with our model
         y_predicted = model(data[keys[epoch]])
 
@@ -609,18 +610,10 @@ for test_type in tests:
         # zero the gradients after updating
         optimizer.zero_grad()
 
-    Final_R2 = R_squared(test_preds,)
-    prints("For the " + test_type + "We get an R squared of " + str(FinalR2))
+    Final_R2 = R_squared(test_preds,true_values_pred)
+    print("For the " + test_type + "We get an R squared of " + str(FinalR2))
 
-
-
-
-
-
-
-
-
-    print(test_type)
+print("Done")
 
 # ----- R squared -----
 
