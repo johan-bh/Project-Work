@@ -7,7 +7,7 @@ import pickle
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-ica = True
+ica = False
 
 if ica == False:
     Features_Y = pd.read_pickle("data/Features+Y.pkl")
@@ -133,7 +133,9 @@ def RidgeReg(key,data, eyes="closed"):
     # convert y_pred to numpy array
     y_test_est = np.array(y_pred)
     y_test = np.array(y_test)
-
+    # scale y_test_est and y_test to have the same mean and std as y_test
+    y_test_est = (y_test_est - y_test_est.mean()) / (y_test_est.std() + 1e-10)
+    y_test = (y_test - y_test.mean()) / (y_test.std() + 1e-10)
     # Compute relative error for X_test and y_test
     # y_pred = model.predict(X_test)
     # compute relative error between the matrix y_pred and the matrix y_test
@@ -160,15 +162,13 @@ ridge_scores_closed = pd.DataFrame()
 for key, data in closed_eyes_ridge.items():
     scores, y_test_est, y_test, best_alpha = RidgeReg(key,data)
     ridge_scores_closed = pd.concat([ridge_scores_closed, scores], axis=1)
-    axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
-    print(key)
+    axis_range = [-4,4]
     if key == "COHERENCE+Y":
         key = "Coherence"
     if key == "COHERENCE+Features+Y":
         key = "Coherence+Subject Info"
     if key == "Features+Y":
         key = "Subject Info"
-    print(key)
     plotting_data_closed.append([key, y_test_est, y_test, axis_range])
 
 # rename the columns to "Coherence", "Coherence + Health" and "Health"
@@ -181,7 +181,7 @@ ridge_scores_open = pd.DataFrame()
 for key, data in open_eyes_ridge.items():
     scores, y_test_est, y_test, best_alpha  = RidgeReg(key,data, "open")
     ridge_scores_open = pd.concat([ridge_scores_open, scores], axis=1)
-    axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
+    axis_range = [-4,4]
     if key == "COHERENCE+Y":
         key = "Coherence"
     if key == "COHERENCE+Features+Y":
@@ -213,13 +213,13 @@ else:
         pickle.dump(ridge_scores_open, f)
 
 # create figure with 3 subplots corresponding to the 3 different data sets
-fig, ax = plt.subplots(3, 1, figsize=(10, 10))
+fig, ax = plt.subplots(3, figsize=(10,10))
 for i, data in enumerate(plotting_data_closed):
     key = data[0]
     y_test_est = data[1]
     y_test = data[2]
     axis_range = data[3]
-    ax[i].plot(axis_range, axis_range, 'k--')
+    ax[i].plot(axis_range,axis_range, 'k--')
     ax[i].plot(y_test, y_test_est, 'ob', alpha=.25)
     ax[i].legend(['Perfect estimation', 'Model estimations'])
     ax[i].title.set_text(f'Test Predictions (Input: Closed eyes, {key})')
@@ -227,18 +227,19 @@ for i, data in enumerate(plotting_data_closed):
     ax[i].set_xlim(axis_range)
     ax[i].set_xlabel('True value')
     ax[i].set_ylabel('Estimated value')
+    ax[i].set_aspect('equal')
     ax[i].grid(True)
     plt.subplots_adjust(hspace=0.5)
-plt.savefig(f"figures/RidgePredictionPlotsClosed{ica_flag}.png")
+plt.savefig(f"figures/RidgePredictionPlotsClosed{ica_flag}.png",bbox_inches='tight')
 
 # create figure with 3 subplots corresponding to the 3 different data sets
-fig, ax = plt.subplots(3, 1, figsize=(10, 10))
+fig, ax = plt.subplots(3, figsize=(10, 10))
 for i, data in enumerate(plotting_data_open):
     key = data[0]
     y_test_est = data[1]
     y_test = data[2]
     axis_range = data[3]
-    ax[i].plot(axis_range, axis_range, 'k--')
+    ax[i].plot(axis_range,axis_range, 'k--')
     ax[i].plot(y_test, y_test_est, 'ob', alpha=.25)
     ax[i].legend(['Perfect estimation', 'Model estimations'])
     ax[i].title.set_text(f'Test Predictions (Input: Open eyes, {key})')
@@ -246,6 +247,7 @@ for i, data in enumerate(plotting_data_open):
     ax[i].set_xlim(axis_range)
     ax[i].set_xlabel('True value')
     ax[i].set_ylabel('Estimated value')
+    ax[i].set_aspect('equal')
     ax[i].grid(True)
     plt.subplots_adjust(hspace=0.5)
-plt.savefig(f"figures/RidgePredictionPlotsOpen{ica_flag}.png")
+plt.savefig(f"figures/RidgePredictionPlotsOpen{ica_flag}.png",bbox_inches='tight')
