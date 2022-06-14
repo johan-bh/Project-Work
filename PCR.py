@@ -6,7 +6,8 @@ pd.set_option('display.max_columns', 10)
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import numpy as np
-ica = True
+import matplotlib.pyplot as plt
+ica = False
 
 if ica == False:
     # Load all data combinations
@@ -58,7 +59,7 @@ closed_eyes_pca = {
     "Features+Y": Features_Y}
 
 
-def PCR(key,data):
+def PCR(key,data, eyes="closed"):
     """This function takes a dataframe and computes multilinear regression.
     It uses the last 6 columns seperately as targets, and then the last 6 columns together as a target.
     The score of each model is stored in a dictionary."""
@@ -102,6 +103,29 @@ def PCR(key,data):
     # # compute relative error between the matrix y_pred and the matrix y_test
     # relative_error["Y"] = np.mean(np.mean(np.abs((y_pred-y_test))/(y_test+1e-10), axis=0))
 
+    # ICA-flag file name
+    if ica == True:
+        ica_flag = "_ICA"
+    else:
+        ica_flag = ""
+
+    # convert y_pred to numpy array
+    y_test_est = np.array(y_pred)
+    y_test = np.array(y_test)
+    axis_range = [np.min([y_test_est, y_test])-1,np.max([y_test_est, y_test])+1]
+    plt.plot(axis_range, axis_range, 'k--')
+    plt.plot(y_test, y_test_est, 'ob', alpha=.25)
+    plt.legend(['Perfect estimation', 'Model estimations'])
+    plt.title(f'Estimated versus true value')
+    plt.suptitle(f'{key}')
+    plt.ylim(axis_range);
+    plt.xlim(axis_range)
+    plt.xlabel('True value')
+    plt.ylabel('Estimated value')
+    plt.grid()
+    plt.savefig(f'figures/PCR_{key} ({eyes}){ica_flag}.png')
+
+
     # convert scores to dataframe
     scores = pd.DataFrame(scores, index=[f"{key}"]).T
     # # convert relative error to dataframe
@@ -116,17 +140,17 @@ for key, data in closed_eyes_pca.items():
     scores = PCR(key,data)
     pca_scores_closed = pd.concat([pca_scores_closed, scores], axis=1)
 
-# rename the columns to "PCA", "PCA + Health" and "Health"
-pca_scores_closed.columns = ["PCA", "PCA + Health", "Health"]
+# rename the columns to "PCA", "PCA + Subject Info" and "Subject Info"
+pca_scores_closed.columns = ["Coherence", "Coherence + Subject Info", "Subject Info"]
 # rename the last index of the dataframe to "All Response Vars"
 pca_scores_closed.rename(index={"Y":"All Response Vars"}, inplace=True)
 
 pca_scores_open = pd.DataFrame()
 for key, data in open_eyes_pca.items():
-    scores = PCR(key,data)
+    scores = PCR(key,data, eyes="open")
     pca_scores_open = pd.concat([pca_scores_open, scores], axis=1)
-# rename the columns to "PCA", "PCA + Health" and "Health"
-pca_scores_open.columns = ["PCA", "PCA + Health", "Health"]
+# rename the columns to "PCA", "PCA + Subject Info" and "Subject Info"
+pca_scores_open.columns = ["Coherence", "Coherence + Subject Info", "Subject Info"]
 # rename the last index of the dataframe to "All Response Vars"
 pca_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
 
@@ -137,9 +161,13 @@ print(pca_scores_open.to_latex(index=True))
 
 if ica == True:
     # save the dataframes to pickle files
-    pca_scores_closed.to_pickle("data/ICA_PCR_scores-closed.pkl")
-    pca_scores_open.to_pickle("data/ICA_PCR_scores-open.pkl")
+    with open("data/ICA_PCR_scores-closed.pkl", "wb") as f:
+        pickle.dump(pca_scores_closed, f)
+    with open("data/ICA_PCR_scores-open.pkl", "wb") as f:
+        pickle.dump(pca_scores_open, f)
 else:
     # save the dataframes to pickle files
-    pca_scores_closed.to_pickle("data/PCR_scores-closed.pkl")
-    pca_scores_open.to_pickle("data/PCR_scores-open.pkl")
+    with open("data/PCR_scores-closed.pkl", "wb") as f:
+        pickle.dump(pca_scores_closed, f)
+    with open("data/PCR_scores-open.pkl", "wb") as f:
+        pickle.dump(pca_scores_open, f)
