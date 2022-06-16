@@ -527,7 +527,7 @@ class Candemann_Parafac_module(nn.Module):
                         for d in range(self.rank):
 
                             CPd_sum += self.CP["alpha" + str(d)]["a"+str(d)+str(i)] \
-                                       * self.CP["alpha" + str(d)]["a"+str(d)+str(i)] \
+                                       * self.CP["alpha" + str(d)]["a"+str(d)+str(j)] \
                                        * self.CP["gamma" + str(d)]["g"+str(d)+str(k)]
 
                         finalsum += x[k][i][j] * CPd_sum
@@ -565,62 +565,62 @@ random.seed(420)
 random.shuffle(keys)
 Error_vals = []
 for test_type in tests:
+    for rank in range(3)+1:
+        rank = 1
 
-    rank = 1
+        model = Candemann_Parafac_module(rank=rank)
 
-    model = Candemann_Parafac_module(rank=rank)
+        torch.manual_seed(20)
+        # 2) Define loss and optimizer
+        learning_rate = 0.00001
+        n_iters = len(data)
+        train_stop = 250
 
-    torch.manual_seed(20)
-    # 2) Define loss and optimizer
-    learning_rate = 0.00001
-    n_iters = len(data)
-    train_stop = 250
-
-    loss = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-
-    train_preds = []
-    test_preds = []
-    true_values_train = []
-    true_values_test = []
-
-    for epoch in range(n_iters):
-        print(test_type + " : " + str(epoch))
-        # predict = forward pass with our model
-        y_predicted = model(data[keys[epoch]])
+        loss = nn.MSELoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 
-        # loss
-        try:
-            l = loss(torch.tensor(response_variables[test_type][keys[epoch]], dtype=torch.float64), y_predicted)
-        except:
-            continue
-        #summ += response_variables[test_type][keys[epoch]]
+        train_preds = []
+        test_preds = []
+        true_values_train = []
+        true_values_test = []
 
-        #Values for R squared
-        if epoch < train_stop:
-            train_preds.append(y_predicted)
-            true_values_train.append(response_variables[test_type][keys[epoch]])
-        else:
-            test_preds.append(y_predicted)
-            true_values_test.append(response_variables[test_type][keys[epoch]])
+        for epoch in range(n_iters):
+            print(test_type + " : " + str(epoch))
+            # predict = forward pass with our model
+            y_predicted = model(data[keys[epoch]])
 
 
-        print("We predict" + str(y_predicted) + " : Real value " + str(response_variables[test_type][keys[epoch]]))
-        # calculate gradients = backward pass
-        l.backward()
+            # loss
+            try:
+                l = loss(torch.tensor(response_variables[test_type][keys[epoch]], dtype=torch.float64), y_predicted)
+            except:
+                continue
+            #summ += response_variables[test_type][keys[epoch]]
 
-        # update weights
-        optimizer.step()
+            #Values for R squared
+            if epoch < train_stop:
+                train_preds.append(y_predicted)
+                true_values_train.append(response_variables[test_type][keys[epoch]])
+            else:
+                test_preds.append(y_predicted)
+                true_values_test.append(response_variables[test_type][keys[epoch]])
 
-        # zero the gradients after updating
-        optimizer.zero_grad()
 
-    Final_R2, MSE_pred, MSE_true = R_squared(test_preds,true_values_test,true_values_train)
-    print("For the " + test_type + " We get an R squared of " + str(Final_R2) + "for the rank : " +  str(rank))
-    print("And for  " + test_type + " We get a mean squared error of  " + str(MSE_pred))
-    Error_vals.append("For the " + test_type + " We get an R squared of " + str(Final_R2) + "for the rank : " + str(rank))
+            print("We predict" + str(y_predicted) + " : Real value " + str(response_variables[test_type][keys[epoch]]))
+            # calculate gradients = backward pass
+            l.backward()
+
+            # update weights
+            optimizer.step()
+
+            # zero the gradients after updating
+            optimizer.zero_grad()
+
+        Final_R2, MSE_pred, MSE_true = R_squared(test_preds,true_values_test,true_values_train)
+        print("For the " + test_type + " We get an R squared of " + str(Final_R2) + "for the rank : " +  str(rank))
+        print("And for  " + test_type + " We get a mean squared error of  " + str(MSE_pred))
+        Error_vals.append("For the " + test_type + " We get an R squared of " + str(Final_R2) + "for the rank : " + str(rank))
 for i in Error_vals:
     print(i)
 print("Done")
