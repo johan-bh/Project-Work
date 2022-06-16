@@ -20,7 +20,7 @@ import pickle
 import matplotlib.pyplot as plt
 
 
-#  ---------- COHERENCE MAP AND RESPONSE VARIABLE LOAD AND HANDLING ----------
+#  -------------------- COHERENCE MAP AND RESPONSE VARIABLE LOAD AND HANDLING --------------------
 
 
 data = pd.read_pickle("data/tensor_data_open.pkl")
@@ -553,8 +553,13 @@ def R_squared(test_preds, true_test, true_train):
     R2 = 1-(MSE_top)/(MSE_bottom)
 
     return R2, MSE_top, MSE_bottom
+# -------------------- MODEL SIMULATION --------------------
 
-# ---------- MODEL TRAINING ----------
+
+
+
+
+# --------------------MODEL TRAINING --------------------
 
 tests = list(response_variables.keys())
 
@@ -565,8 +570,8 @@ random.seed(420)
 random.shuffle(keys)
 Error_vals = []
 for test_type in tests:
-    for rank in range(3)+1:
-        rank = 1
+    for rank in range(3):
+        rank = rank+1
 
         model = Candemann_Parafac_module(rank=rank)
 
