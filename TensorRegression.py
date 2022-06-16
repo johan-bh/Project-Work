@@ -556,6 +556,23 @@ def R_squared(test_preds, true_test, true_train):
 # -------------------- MODEL SIMULATION --------------------
 
 
+"""
+y_sim_rank1 = {}
+y_sim_rank2 = {}
+y_sim_rank3 = {}
+
+y_sims = [y_sim_rank1, y_sim_rank2, y_sim_rank3]
+
+for y_sims_dictionary in y_sims:
+    for X_matrix in range(n_iters):
+
+        model_sim = Candemann_Parafac_module(rank=rank)
+        model_sim(data[keys[X_matrix]])
+"""
+
+
+
+
 
 
 
