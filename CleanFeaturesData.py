@@ -116,6 +116,10 @@ def clean_file1():
     df = df.drop(df.index[~df.index.isin(valid_ids)])
     # Delete all rows that are not in valid_ids
     df = df.drop(df.index[~df.index.isin(valid_ids)])
+
+    # drop 'HSCRP' column as it appears in the other file
+    df = df.drop(columns=['HSCRP'])
+
     return df
 
 def clean_file2():
@@ -191,7 +195,7 @@ def get_response_vars():
     df.to_pickle("data/response_var_df.pkl")
     return df.head(),df.shape
 
-# print(clean_file1())
+print(clean_file1())
 print(clean_file2())
 print(merge_features())
 print(get_response_vars())

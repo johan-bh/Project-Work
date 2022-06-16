@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 plotting = False
-ica = True
+ica = False
 
 if ica == False:
     # Load the processed data for eyes closed and eyes open
@@ -70,12 +70,6 @@ df_open = pd.DataFrame.from_dict(coherence_maps_open, orient='index')
 # this resulted in a total NaN value fractin of 9%. We therefore chose to drop these patients from our analysis.
 df_closed.dropna(inplace=True)
 df_open.dropna(inplace=True)
-
-
-valid_ids = list(df_closed.index)
-# pickle valid_ids
-with open('data/valid_ids.pkl', 'wb') as f:
-    pickle.dump(valid_ids, f)
 
 
 # Delete all rows in df_closed and df_open that dont have the same index as df
