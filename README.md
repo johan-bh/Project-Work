@@ -1,10 +1,11 @@
 # Project-Work
 Project Work (Course 02466) - Bsc. Artificial Intelligence and Data @Technical University of Denmark
 
+# Info for reproducability:
+In this project we used Python version 3.8.10
 Run the following command: "pip install -r requirements.txt" to install the dependencies used for this project. Note that some of the packages (i.e. Tensor) were installed for GPU - if you don't have CUDA eligible GPU we advice you to install the CPU version which should yield the same results.
 
-# Info for reproducability:
-The following is a description of the order the project files should be run in:
+## The following is a description of the order the project files should be run in:
 
 1) We start by defining the filepaths to the folders containing the EEG files in the extract_files.py (the EEG data is using the standard european format as described in our report. We loop through the files of each folder to find the files that are valid as described in the code. The files were exported using a Curry plugin in matlab resulting in 3 files for each EEG recording:
 - a .ceo file
