@@ -18,6 +18,7 @@ def PCA_Feature_Y_Dims():
     pca_dimension.set_index(df.index, inplace=True)
     pca_dimension = pd.concat([pca_dimension, df], axis=1)
     features = pd.read_pickle("data/clean_features.pkl")
+    # We remove the entries doens't have overlapping indices with pca_dimension
     pca_dimension = pca_dimension.drop(pca_dimension.index[~pca_dimension.index.isin(features.index)])
     features = features.drop(features.index[~features.index.isin(pca_dimension.index)])
     return features
