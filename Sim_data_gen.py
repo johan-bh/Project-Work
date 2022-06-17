@@ -532,34 +532,13 @@ class Candemann_Parafac_module(nn.Module):
 
         return self.beta_0 + finalsum
 
-# ----- Getting R-squared -----
-
-
-def R_squared(test_preds, true_test, true_train):
-    #(test_preds, true_test, true_values_train)
-    #mean_pred = sum(y_pred_vals)/len(y_pred_vals)
-    mean_true = sum(true_train) / len(true_train)
-
-
-    MSE_top = 0
-    MSE_bottom = 0
-
-    for i,j in zip(true_test,test_preds):
-        MSE_top += (i-j)**2
-    for i in true_test:
-        MSE_bottom += (i-mean_true)**2
-
-    R2 = 1-(MSE_top)/(MSE_bottom)
-
-    return R2, MSE_top, MSE_bottom
-
 # -------------------- MODEL SIMULATION --------------------
 
 response_variables_sim = {}
-test_names = ['MMSE', 'ACE', 'TrailMakingA', 'TrailMakingB', 'DigitSymbol', 'Retention']
+test_names = ['MMSE']#, 'ACE', 'TrailMakingA', 'TrailMakingB', 'DigitSymbol', 'Retention']
 
 
-for rank_val in range(3):
+for rank_val in range(1):
     rank = rank_val+1
     model_sim = Candemann_Parafac_module(rank=rank)
     for name in test_names:
@@ -569,81 +548,4 @@ for rank_val in range(3):
         print(name  + "for rank = " + str(rank) + " = done")
 
 
-
-
-# --------------------MODEL TRAINING --------------------
-
-
-random.seed(420)
-random.shuffle(keys)
-Error_vals = []
-for test in test_names:#Looping over all tests seperately
-
-    for rank_iter in range(3):
-        rank = rank_iter+1
-        torch.manual_seed(20)
-
-
-        model = Candemann_Parafac_module(rank=rank)
-
-        learning_rate = 0.05
-        n_iters = len(data)
-        train_stop = 250
-
-        loss = nn.MSELoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-        train_preds = []
-        test_preds = []
-        true_values_train = []
-        true_values_test = []
-
-
-
-        for epoch in range(n_iters):  # looping over all values in dataset for given rank and test
-            print(test + " : rank = " + str(rank) + " : epoch = " + str(epoch))
-            # predict = forward pass with our model
-            try:
-                y_true = response_variables_sim[test][keys[epoch]+ "rank"+ str(rank)]
-            except:
-                continue
-
-            y_predicted = model(data[keys[epoch]])
-
-            # loss
-
-            l = source_Tensor.clone().detach(loss(torch.tensor(y_true, dtype=torch.float64), y_predicted))
-
-
-            # Values for R squared
-            if epoch < train_stop:
-                train_preds.append(y_predicted)
-                true_values_train.append(y_true)
-            else:
-                test_preds.append(y_predicted)
-                true_values_test.append(y_true)
-                continue
-
-            # Backward MSE and step
-
-            print("We predict" + str(y_predicted) + " : Real value " + str(y_true))
-            # calculate gradients = backward pass
-            l.backward()
-
-            # update weights
-            optimizer.step()
-
-            # zero the gradients after updating
-            optimizer.zero_grad()
-
-        Final_R2, MSE_pred, MSE_true = R_squared(test_preds, true_values_test, true_values_train)
-        print("For the " + test + " We get an R squared of " + str(Final_R2) + "for the rank : " + str(rank))
-        print("And for  " + test + " We get a mean squared error of  " + str(MSE_pred))
-        Error_vals.append("For the " + test + " We get an R squared of " + str(Final_R2) + "for the rank : " + str(rank))
-
-
-
-        for error in Error_vals:
-            print(error)
-
-        print("Done")
+pickle.dump(response_variables_sim,open('data/Simulated_Data_Tensor.pkl', 'wb'))
