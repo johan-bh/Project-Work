@@ -24,10 +24,23 @@ import matplotlib.pyplot as plt
 
 
 data = pd.read_pickle("data/tensor_data_open.pkl")
-
+# print(len(data))
 with open('data/response_var_df.pkl', 'rb') as f:
     response_var_df = pickle.load(f)
+# print(response_var_df.shape)
 response_variables = response_var_df.to_dict('dict')
+# print(len(response_variables))
+# Making sure the tensor regression model is run on the same size of data as the other models (256 entries)
+dim_regulator = pd.read_pickle("data/ICA_PCA+Features+Y-OPEN.pkl")
+# find the intersterct of the indices of dim_regulator and response_var_df
+intersect = list(set(dim_regulator.index) & set(response_var_df.index))
+# drop the keys of data that are not in intersect
+data = {key: value for key, value in data.items() if key in intersect}
+# drop the the indices of response_var_df that are not in intersect
+response_var_df = response_var_df.drop(response_var_df.index[~response_var_df.index.isin(intersect)])
+response_variables = response_var_df.to_dict('dict')
+# print(len(data))
+# print(len(response_variables))
 
 keys = list()
 for key,value in data.items(): #Convert every coherence map into a tensor with key in keys

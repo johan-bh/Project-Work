@@ -195,7 +195,7 @@ def get_response_vars():
     df.to_pickle("data/response_var_df.pkl")
     return df.head(),df.shape
 
-print(clean_file1())
-print(clean_file2())
-print(merge_features())
-print(get_response_vars())
+# print(clean_file1())
+# print(clean_file2())
+# print(merge_features())
+# print(get_response_vars())
