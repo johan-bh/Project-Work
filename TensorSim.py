@@ -568,7 +568,7 @@ for test in test_names:#Looping over all tests seperately
 
     model = Candemann_Parafac_module(rank=rank)
 
-    learning_rate = 0.05
+    learning_rate = 0.1
     n_iters = len(data)
     train_stop = np.floor((3/4)*n_iters)
 
@@ -641,7 +641,7 @@ for test in test_names:#Looping over all tests seperately
     ax.set_aspect('equal')
     ax.grid(True)
     plt.subplots_adjust(hspace=0.5)
-    #plt.savefig(f"figures/RidgePredictionPlotsOpen.png", bbox_inches='tight')
+    #plt.savefig(f"figures/TensorRegressionPlotsOpen.png", bbox_inches='tight')
     plt.show()
 
 
