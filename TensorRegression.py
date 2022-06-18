@@ -595,7 +595,7 @@ for test_type in tests:
         torch.manual_seed(20)
         # 2) Define loss and optimizer
         learning_rate = 0.125
-        n_iters = 20#len(data)
+        n_iters = len(data)
         train_stop = np.floor((3 / 4) * n_iters)
 
         loss = nn.MSELoss()
