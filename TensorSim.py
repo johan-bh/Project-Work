@@ -559,7 +559,7 @@ def R_squared(test_preds, true_test, true_train):
 random.seed(420)
 random.shuffle(keys)
 Error_vals = []
-test_names = list(response_var_df.keys())
+test_names = ["MMSErank1", "MMSErank2", "MMSErank3"]
 for test in test_names:#Looping over all tests seperately
 
     rank = int(test[-1])
@@ -622,6 +622,27 @@ for test in test_names:#Looping over all tests seperately
     print("For the " + test + " We get an R squared of " + str(Final_R2) + "for the rank : " + str(rank))
     print("And for  " + test + " We get a mean squared error of  " + str(MSE_pred))
     Error_vals.append("For the " + test + " We get an R squared of " + str(Final_R2))
+
+
+    #plot figure
+    fig, ax = plt.subplots(1, figsize=(10, 10))
+    x_vals = [i.detach().numpy() for i in true_values_test]
+    y_vals = [i.detach().numpy() for i in test_preds]
+    axis_range = [min(min(y_vals),min(x_vals)),max(max(y_vals),max(x_vals))]
+
+    ax.plot(axis_range, axis_range, 'k--')
+    ax.plot(x_vals, y_vals, 'ob', alpha=.25)
+    ax.legend(['Perfect estimation', 'Model estimations'])
+    ax.title.set_text(f'Test Predictions')
+    ax.set_ylim(axis_range)
+    ax.set_xlim(axis_range)
+    ax.set_xlabel('True value')
+    ax.set_ylabel('Estimated value')
+    ax.set_aspect('equal')
+    ax.grid(True)
+    plt.subplots_adjust(hspace=0.5)
+    #plt.savefig(f"figures/RidgePredictionPlotsOpen.png", bbox_inches='tight')
+    plt.show()
 
 
 

@@ -236,9 +236,6 @@ plt.savefig(f"figures/RidgePredictionPlotsClosed{ica_flag}.png",bbox_inches='tig
 fig, ax = plt.subplots(3, figsize=(10, 10))
 for i, data in enumerate(plotting_data_open):
     key = data[0]
-    y_test_est = data[1]
-    y_test = data[2]
-    axis_range = data[3]
     ax[i].plot(axis_range,axis_range, 'k--')
     ax[i].plot(y_test, y_test_est, 'ob', alpha=.25)
     ax[i].legend(['Perfect estimation', 'Model estimations'])
