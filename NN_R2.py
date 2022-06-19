@@ -16,10 +16,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 #Initialize output choices
-ica = False
+ica = True
 plot_learning_curve = False
-plot_model_pred_test = True
-plot_model_pred_train = False
+plot_model_pred_test = False
+plot_model_pred_train = True
 print_latex = True
 
 #Initialize if input datahas been preprocessed with or without ICA
@@ -171,7 +171,9 @@ for key, data in closed_eyes_pca.items():
         plt.ylabel('Loss')
         plt.title(f'Learning curve: {key}, closed eyes')
         plt.grid()
+        #plt.savefig(f"figures/Learning_curve_closed_{key}.png", bbox_inches='tight')
         plt.show()
+
     
     if plot_model_pred_test == True:
         #plotting the test model
@@ -197,6 +199,7 @@ for key, data in closed_eyes_pca.items():
         plt.xlabel('True value')
         plt.ylabel('Estimated value')
         plt.grid()
+        #plt.savefig(f"figures/Training_ICA_closed_{key}.png", bbox_inches='tight')
         plt.show()
     
 
@@ -231,6 +234,7 @@ for key, data in open_eyes_pca.items():
         plt.ylabel('Loss')
         plt.title(f'Learning curve: {key}, closed eyes')
         plt.grid()
+        #plt.savefig(f"figures/Learning_curve_open_{key}.png",bbox_inches='tight')
         plt.show()
     
     if plot_model_pred_test == True:
@@ -257,6 +261,7 @@ for key, data in open_eyes_pca.items():
         plt.xlabel('True value')
         plt.ylabel('Estimated value')
         plt.grid()
+        #plt.savefig(f"figures/Training_ICA_open_{key}.png", bbox_inches='tight')
         plt.show()
     
     
