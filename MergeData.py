@@ -160,12 +160,12 @@ def Merge_Coherence_Y():
     df_open = pd.concat([df_open,df], axis=1)
     if ica == False:
         # Save the Coherence +  response vars (Y) matrix to a pickle file
-        df_closed.to_pickle("data/Coherence+Y-CLOSED.pkl")
-        df_open.to_pickle("data/Coherence+Y-OPEN.pkl")
+        df_closed.to_pickle("data/Coherence+Y-TENSOR_CLOSED.pkl")
+        df_open.to_pickle("data/Coherence+Y-TENSOR_OPEN.pkl")
     else:
         # Save the ICA Coherence +  response vars (Y) matrix to a pickle file
-        df_closed.to_pickle("data/ICA_Coherence+Y-CLOSED.pkl")
-        df_open.to_pickle("data/ICA_Coherence+Y-OPEN.pkl")
+        df_closed.to_pickle("data/ICA_Coherence+Y-TENSOR_CLOSED.pkl")
+        df_open.to_pickle("data/ICA_Coherence+Y-TENSOR_OPEN.pkl")
     return (df_closed,df_open)
 
 # print(Merge_Coherence_Y())
@@ -203,11 +203,11 @@ def Merge_Coherence_Feats_Y():
     data_merge_closed = pd.concat([coh_only_closed,features,df_closed_responseVars], axis=1)
     data_merge_open = pd.concat([coh_only_open,features,df_open_responseVars], axis=1)
     if ica == False:
-        data_merge_closed.to_pickle("data/Coherence+Features+Y-CLOSED.pkl")
-        data_merge_open.to_pickle("data/Coherence+Features+Y-OPEN.pkl")
+        data_merge_closed.to_pickle("data/Coherence+Features+Y-TENSOR_CLOSED.pkl")
+        data_merge_open.to_pickle("data/Coherence+Features+Y-TENSOR_OPEN.pkl")
     else:
-        data_merge_closed.to_pickle("data/ICA_Coherence+Features+Y-CLOSED.pkl")
-        data_merge_open.to_pickle("data/ICA_Coherence+Features+Y-OPEN.pkl")
+        data_merge_closed.to_pickle("data/ICA_Coherence+Features+Y-TENSOR_CLOSED.pkl")
+        data_merge_open.to_pickle("data/ICA_Coherence+Features+Y-TENSOR_OPEN.pkl")
     return (data_merge_closed.shape,data_merge_open.shape)
 
 print(Merge_Coherence_Feats_Y())

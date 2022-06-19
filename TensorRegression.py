@@ -19,11 +19,26 @@ import pickle
 #Plotting imports
 import matplotlib.pyplot as plt
 
+ica = True
+eyes = "closed"
 
+if eyes == "closed":
+    folder = "TENSOR_CLOSED"
+
+elif eyes == "open":
+    folder = "TENSOR_OPEN"
+
+if ica == True:
+    ica_flag = "-ICA"
+else:
+    ica_flag = ""
 #  -------------------- COHERENCE MAP AND RESPONSE VARIABLE LOAD AND HANDLING --------------------
 
+if ica == True:
+    data = pd.read_pickle(f"data/ICA_tensor_data_{eyes}.pkl")
+else:
+    data = pd.read_pickle(f"data/tensor_data_{eyes}.pkl")
 
-data = pd.read_pickle("data/tensor_data_open.pkl")
 # print(len(data))
 with open('data/response_var_df.pkl', 'rb') as f:
     response_var_df = pickle.load(f)
@@ -42,10 +57,17 @@ response_variables = response_var_df.to_dict('dict')
 # print(len(data))
 # print(len(response_variables))
 
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# # check if current device is a GPU
+# is_cuda = torch.cuda.is_available()
+# print(is_cuda)
+
 keys = list()
 for key,value in data.items(): #Convert every coherence map into a tensor with key in keys
     data[key] = torch.tensor(value)
     keys.append(key)
+
+# set device to cuda if available
 
 
 #  ---------- IMPLEMENTATION OF TENSOR REGRESSION WITH ADAM OPTIMIZER  ----------
@@ -604,7 +626,6 @@ for test_type in tests:
         rank = rank+1
 
         model = Candemann_Parafac_module(rank=rank)
-
         torch.manual_seed(20)
         # 2) Define loss and optimizer
         learning_rate = 0.125
@@ -675,7 +696,9 @@ for test_type in tests:
         ax.grid(True)
         plt.subplots_adjust(hspace=0.5)
         # plt.savefig(f"figures/TensorRegressionPlotsOpen.png", bbox_inches='tight')
-        plt.show()
+        # save figure for each test type and rank append ica_flag to the file name
+        plt.savefig(f"figures/{folder}/TENSOR_{test_type}_R{rank}{ica_flag}.png", bbox_inches='tight')
+        # plt.show()
 for i in Error_vals:
     print(i)
 print("Done")
@@ -705,7 +728,7 @@ X_test = torch.tensor([5], dtype=torch.float32)
 if __name__ == '__main__':
 
     torch.manual_seed(42)
-    X, X_test, y, y_test = Load_data("data/PCA+Y-OPEN.pkl")
+    X, X_test, y, y_test = Load_data("data/PCA+Y-TENSOR_OPEN.pkl")
     Xn = X.to_numpy()
     yn = y.to_numpy()
     dataset = DataSet(Xn, yn)

@@ -8,7 +8,7 @@ Created on Mon Jun  6 17:45:24 2022
 
 import pandas as pd
 
-X = pd.read_pickle('/Users/smilladue/Desktop/Documents/DTU/02466_Fagprojekt/Project-Work/data/PCA+Features+Y-CLOSED.pkl')
+X = pd.read_pickle('/Users/smilladue/Desktop/Documents/DTU/02466_Fagprojekt/Project-Work/data/PCA+Features+Y-TENSOR_CLOSED.pkl')
 y = X.iloc[:, -6:]
 X = X.iloc[:, :-6]
 
