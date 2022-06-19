@@ -13,4 +13,4 @@ y = X.iloc[:, -6:]
 X = X.iloc[:, :-6]
 
 round(y.describe(),2)
-y.boxplot(column=['MMSE','ACE','TrailMakingA','TrailMakingB', 'DigitSymbol', 'Retention'], fontsize='small')
+y.boxplot(figsize=[10,5],fontsize='large', column=['MMSE','ACE','TrailMakingA','TrailMakingB', 'DigitSymbol', 'Retention'])
