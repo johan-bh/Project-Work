@@ -8,7 +8,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
-ica = False
+ica = True
 
 if ica == False:
     # Load all data combinations
@@ -103,8 +103,10 @@ def PCR(key,data, eyes="closed"):
     y_test_est = np.array(y_pred)
     y_test = np.array(y_test)
     # scale y_test_est and y_test to have the same mean and std as y_test
-    y_test_est = (y_test_est - y_test_est.mean()) / (y_test_est.std() + 1e-10)
-    y_test = (y_test - y_test.mean()) / (y_test.std() + 1e-10)
+    y_train_mean = np.array(y_train.mean(axis=0))
+    y_train_std=np.array(y_train.std(axis=0))
+    y_test_est=(y_test_est-y_train_mean)/y_train_std
+    y_test=(y_test-y_train_mean)/y_train_std
 
     # Compute relative error for X_test and y_test
     # y_pred = model.predict(X_test)
@@ -188,7 +190,7 @@ pca_scores_open.rename(index={"Y":"All Response Vars"}, inplace=True)
 #         pickle.dump(pca_scores_open, f)
 
 # create figure with 3 subplots corresponding to the 3 different data sets
-fig, ax = plt.subplots(3, figsize=(10,10))
+fig, ax = plt.subplots(3, figsize=(20,20))
 for i, data in enumerate(plotting_data_closed):
     key = data[0]
     y_test_est = data[1]
@@ -204,11 +206,11 @@ for i, data in enumerate(plotting_data_closed):
     ax[i].set_ylabel('Estimated value')
     ax[i].set_aspect('equal')
     ax[i].grid(True)
-    plt.subplots_adjust(hspace=0.5)
-plt.savefig(f"figures/PCR_PredictionPlotsClosed{ica_flag}.png",bbox_inches='tight')
+    #plt.subplots_adjust(hspace=0.5)
+#plt.savefig(f"figures/PCR_PredictionPlotsClosed{ica_flag}.png",bbox_inches='tight')
 
 # create figure with 3 subplots corresponding to the 3 different data sets
-fig, ax = plt.subplots(3, figsize=(10, 10))
+fig, ax = plt.subplots(3, figsize=(20, 20))
 for i, data in enumerate(plotting_data_open):
     key = data[0]
     y_test_est = data[1]
@@ -224,5 +226,5 @@ for i, data in enumerate(plotting_data_open):
     ax[i].set_ylabel('Estimated value')
     ax[i].set_aspect('equal')
     ax[i].grid(True)
-    plt.subplots_adjust(hspace=0.5)
-plt.savefig(f"figures/PCR_PredictionPlotsOpen{ica_flag}.png",bbox_inches='tight')
+    #ytplt.subplots_adjust(hspace=0.5)
+#plt.savefig(f"figures/PCR_PredictionPlotsOpen{ica_flag}.png",bbox_inches='tight')
